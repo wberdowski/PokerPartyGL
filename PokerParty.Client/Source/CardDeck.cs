@@ -36,9 +36,6 @@ namespace PokerParty.Client
                             (PlayingCard.CardValue)valuesV.GetValue(j)
                             ), idx);
 
-
-                        Console.WriteLine(file + " " + idx);
-
                         idx++;
                     }
                     else

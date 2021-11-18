@@ -158,6 +158,16 @@ namespace PokerParty.Client
                 gameObjects.Add(obj);
             }
 
+            {
+                var obj = new CardObject(new Vector3(0.1f, 0.74f, 0));
+                obj.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Num2);
+                obj.Layer = RenderLayer.Card;
+                obj.Shader = cardShader;
+                obj.Mesh = cardMesh;
+                obj.LoadToBuffer();
+                gameObjects.Add(obj);
+            }
+
             Console.WriteLine("Assets loaded");
 
             base.OnLoad();
@@ -271,6 +281,20 @@ namespace PokerParty.Client
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+
+            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Card).Cast<CardObject>())
+            {
+                obj.Shader.Use();
+                obj.Shader.SetMatrix4("view", Camera.View);
+                obj.Shader.SetMatrix4("projection", Camera.Projection);
+                obj.Shader.SetMatrix4("model", obj.ModelMatrix);
+                obj.Shader.SetInt("texId", CardDeck.cards[obj.CardType]);
+
+                GL.BindTexture(TextureTarget.Texture2DArray, CardDeck.Texture.Handle);
+
+                obj.Draw();
+            }
+
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
                 obj.Shader.Use();
@@ -288,6 +312,8 @@ namespace PokerParty.Client
                 }
                 obj.Draw();
             }
+
+            // UI
 
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI))
             {
@@ -307,18 +333,6 @@ namespace PokerParty.Client
                 obj.Draw();
             }
 
-            GL.BindTexture(TextureTarget.Texture2DArray, CardDeck.Texture.Handle);
-
-            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Card).Cast<CardObject>())
-            {
-                obj.Shader.Use();
-                obj.Shader.SetMatrix4("view", Camera.View);
-                obj.Shader.SetMatrix4("projection", Camera.Projection);
-                obj.Shader.SetMatrix4("model", obj.ModelMatrix);
-                obj.Shader.SetInt("texId", CardDeck.cards[obj.CardType]);
-
-                obj.Draw();
-            }
 
             GL.Flush();
 
