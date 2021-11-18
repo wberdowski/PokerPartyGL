@@ -81,14 +81,19 @@ namespace PokerParty.Client
             GL.DrawArrays(PrimitiveType.TriangleFan, 0, Mesh.Vertices.Length / 5);
         }
 
-        public override void LoadToBuffer(Shader shader)
+        public override void LoadToBuffer()
         {
             if (Mesh == null)
             {
                 throw new Exception("Mesh cannot be null.");
             }
 
-            shader.Use();
+            if (Shader == null)
+            {
+                throw new Exception("Shader cannot be null.");
+            }
+
+            Shader.Use();
 
             // VAO
             VAO = GL.GenVertexArray();
@@ -102,11 +107,11 @@ namespace PokerParty.Client
             Console.WriteLine($"Load model: {Mesh.Vertices.Length * sizeof(float):n0} B");
 
             // Attributes
-            int vertexLocation = shader.GetAttribLocation("aPos");
+            int vertexLocation = Shader.GetAttribLocation("aPos");
             GL.EnableVertexAttribArray(vertexLocation);
             GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
 
-            int texCoordLocation = shader.GetAttribLocation("aTexCoord");
+            int texCoordLocation = Shader.GetAttribLocation("aTexCoord");
             GL.EnableVertexAttribArray(texCoordLocation);
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
         }

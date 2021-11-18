@@ -5,6 +5,7 @@
         Undefined,
         UI,
         Standard,
-        Transparent
+        Transparent,
+        Card
     }
 }

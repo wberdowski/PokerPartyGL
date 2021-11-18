@@ -12,6 +12,7 @@ namespace PokerParty.Client
         public Quaternion Rotation { get { return _rotation; } set { _rotation = value; UpdateModelMatrix(); } }
         public Vector3 Scale { get { return _scale; } set { _scale = value; UpdateModelMatrix(); } }
         public Matrix4 ModelMatrix { get; set; } = Matrix4.Identity;
+        public Shader Shader { get; set; }
         public int VAO { get; set; }
         public int VBO { get; set; }
 
@@ -51,14 +52,19 @@ namespace PokerParty.Client
             ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position);
         }
 
-        public virtual void LoadToBuffer(Shader shader)
+        public virtual void LoadToBuffer()
         {
             if (Mesh == null)
             {
                 throw new Exception("Mesh cannot be null.");
             }
 
-            shader.Use();
+            if (Shader == null)
+            {
+                throw new Exception("Shader cannot be null.");
+            }
+
+            Shader.Use();
 
             // VAO
             VAO = GL.GenVertexArray();
@@ -77,15 +83,15 @@ namespace PokerParty.Client
             //GL.BufferData(BufferTarget.ElementArrayBuffer, Indices.Length * sizeof(uint), Indices, BufferUsageHint.StaticDraw);
 
             // Attributes
-            int vertexLocation = shader.GetAttribLocation("aPos");
+            int vertexLocation = Shader.GetAttribLocation("aPos");
             GL.EnableVertexAttribArray(vertexLocation);
             GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 0);
 
-            int texCoordLocation = shader.GetAttribLocation("aTexCoord");
+            int texCoordLocation = Shader.GetAttribLocation("aTexCoord");
             GL.EnableVertexAttribArray(texCoordLocation);
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 8 * sizeof(float), 3 * sizeof(float));
 
-            int normalLocation = shader.GetAttribLocation("aNormal");
+            int normalLocation = Shader.GetAttribLocation("aNormal");
             GL.EnableVertexAttribArray(normalLocation);
             GL.VertexAttribPointer(normalLocation, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 5 * sizeof(float));
         }

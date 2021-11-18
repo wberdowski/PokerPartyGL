@@ -5,6 +5,7 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace PokerParty.Client
 
         private Shader stdShader;
         private Shader uiShader;
+        private Shader cardShader;
         private float pitch;
         private float yaw = -90;
         Vector2? lastPos = null;
@@ -68,6 +70,7 @@ namespace PokerParty.Client
 
             stdShader = new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl");
             uiShader = new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl");
+            cardShader = new Shader("shaders/card/vert.glsl", "shaders/card/frag.glsl");
 
             Camera = new Camera(
                 new Vector3(0, 1, 1),
@@ -78,23 +81,31 @@ namespace PokerParty.Client
                 80f
             );
 
+            Console.WriteLine("Loading assets...");
+            var sw = Stopwatch.StartNew();
+            CardDeck.Load();
+            sw.Stop();
+            Console.WriteLine("Card deck loaded in " + sw.ElapsedMilliseconds + " ms");
+
             stdShader.Use();
 
             {
                 var obj = new GameObject(new Vector3(0, 0, 0));
+                obj.Shader = stdShader;
                 obj.Albedo = Texture.FromFile("models/floor/textures/wood.png");
                 obj.Mesh = new Mesh();
                 obj.Mesh.LoadFromObj("models/floor/floor.obj");
-                obj.LoadToBuffer(stdShader);
+                obj.LoadToBuffer();
                 gameObjects.Add(obj);
             }
 
             {
-                var obj = new GameObject();
+                var obj = new GameObject(new Vector3(0, 0, 0));
+                obj.Shader = stdShader;
                 obj.Albedo = Texture.FromFile("models/table/textures/table.png");
                 obj.Mesh = new Mesh();
                 obj.Mesh.LoadFromObj("models/table/table.obj");
-                obj.LoadToBuffer(stdShader);
+                obj.LoadToBuffer();
                 gameObjects.Add(obj);
             }
 
@@ -104,52 +115,50 @@ namespace PokerParty.Client
 
             {
                 var obj = new GameObject(new Vector3(0, 0, 0.8f));
+                obj.Shader = stdShader;
                 obj.Mesh = chairMesh;
                 obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            var cardMesh = new Mesh();
-            cardMesh.LoadFromObj("models/card/card.obj");
-
-            string[] texs = new string[]
-            {
-                "ace_of_spades.png",
-                "2_of_diamonds.png",
-                "ace_of_hearts.png",
-                "king_of_spades2.png",
-                "6_of_clubs.png"
-            };
-
-            for (int i = 0; i < 5; i++)
-            {
-                var obj = new GameObject(new Vector3(i * 0.1f + -0.2f, 0.74f, 0));
-                obj.Scale = new Vector3(1.3f);
-                obj.Albedo = Texture.FromFile("models/card/textures/" + texs[i]);
-                obj.Mesh = cardMesh;
-                obj.LoadToBuffer(stdShader);
+                obj.LoadToBuffer();
                 gameObjects.Add(obj);
             }
 
             // FONTS
             {
                 var fontObj = new FontObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
+                fontObj.Shader = uiShader;
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomRight;
                 fontObj.Position = new Vector3(-(fontObj.Size.X + 10), fontObj.Size.Y + 10, 0);
-                fontObj.LoadToBuffer(uiShader);
+                fontObj.LoadToBuffer();
                 gameObjects.Add(fontObj);
             }
 
             {
-                var fontObj = new FontObject("Fold [F]\nRise [R]\nCheck [C]", new Font("Segoe UI", 16f, FontStyle.Bold), new SolidBrush(Color.White));
+                var fontObj = new FontObject("Fold [F]\nRise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
+                fontObj.Shader = uiShader;
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomLeft;
                 fontObj.Position = new Vector3(10, fontObj.Size.Y + 10, 0);
-                fontObj.LoadToBuffer(uiShader);
+                fontObj.LoadToBuffer();
                 gameObjects.Add(fontObj);
             }
+
+            // CARDS
+
+            var cardMesh = new Mesh();
+            cardMesh.LoadFromObj("models/card/card.obj");
+
+            {
+                var obj = new CardObject(new Vector3(0, 0.74f, 0));
+                obj.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
+                obj.Layer = RenderLayer.Card;
+                obj.Shader = cardShader;
+                obj.Mesh = cardMesh;
+                obj.LoadToBuffer();
+                gameObjects.Add(obj);
+            }
+
+            Console.WriteLine("Assets loaded");
 
             base.OnLoad();
         }
@@ -262,13 +271,13 @@ namespace PokerParty.Client
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            stdShader.Use();
-            stdShader.SetMatrix4("view", Camera.View);
-            stdShader.SetMatrix4("projection", Camera.Projection);
-
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
-                stdShader.SetMatrix4("model", obj.ModelMatrix);
+                obj.Shader.Use();
+                obj.Shader.SetMatrix4("view", Camera.View);
+                obj.Shader.SetMatrix4("projection", Camera.Projection);
+                obj.Shader.SetMatrix4("model", obj.ModelMatrix);
+
                 if (obj.Albedo != null)
                 {
                     obj.Albedo.Use();
@@ -280,13 +289,13 @@ namespace PokerParty.Client
                 obj.Draw();
             }
 
-            uiShader.Use();
-            uiShader.SetMatrix4("view", Camera.View);
-            uiShader.SetMatrix4("projection", Camera.ProjectionUI);
-
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI))
             {
-                uiShader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
+                obj.Shader.Use();
+                obj.Shader.SetMatrix4("view", Camera.View);
+                obj.Shader.SetMatrix4("projection", Camera.ProjectionUI);
+                obj.Shader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
+
                 if (obj.Albedo != null)
                 {
                     obj.Albedo.Use();
@@ -295,6 +304,19 @@ namespace PokerParty.Client
                 {
                     GL.BindTexture(TextureTarget.Texture2D, 0);
                 }
+                obj.Draw();
+            }
+
+            GL.BindTexture(TextureTarget.Texture2DArray, CardDeck.Texture.Handle);
+
+            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Card).Cast<CardObject>())
+            {
+                obj.Shader.Use();
+                obj.Shader.SetMatrix4("view", Camera.View);
+                obj.Shader.SetMatrix4("projection", Camera.Projection);
+                obj.Shader.SetMatrix4("model", obj.ModelMatrix);
+                obj.Shader.SetInt("texId", CardDeck.cards[obj.CardType]);
+
                 obj.Draw();
             }
 
