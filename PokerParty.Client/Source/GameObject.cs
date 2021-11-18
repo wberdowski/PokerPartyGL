@@ -6,6 +6,7 @@ namespace PokerParty.Client
 {
     public class GameObject : IDisposable
     {
+        public RenderLayer Layer { get; set; } = RenderLayer.Standard;
         public Mesh Mesh { get; set; }
         public Vector3 Position { get { return _position; } set { _position = value; UpdateModelMatrix(); } }
         public Quaternion Rotation { get { return _rotation; } set { _rotation = value; UpdateModelMatrix(); } }
@@ -16,9 +17,9 @@ namespace PokerParty.Client
 
         public Texture Albedo { get; set; }
 
-        private Vector3 _position = Vector3.Zero;
-        private Quaternion _rotation = Quaternion.Identity;
-        private Vector3 _scale = Vector3.One;
+        internal Vector3 _position = Vector3.Zero;
+        internal Quaternion _rotation = Quaternion.Identity;
+        internal Vector3 _scale = Vector3.One;
 
         public GameObject()
         {
@@ -34,7 +35,7 @@ namespace PokerParty.Client
             Rotation = rotation;
         }
 
-        public void Draw()
+        public virtual void Draw()
         {
             if (Mesh == null)
             {
@@ -45,12 +46,12 @@ namespace PokerParty.Client
             GL.DrawArrays(PrimitiveType.Triangles, 0, Mesh.Vertices.Length / 8);
         }
 
-        public void UpdateModelMatrix()
+        public virtual void UpdateModelMatrix()
         {
             ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position);
         }
 
-        public void LoadToBuffer(Shader shader)
+        public virtual void LoadToBuffer(Shader shader)
         {
             if (Mesh == null)
             {

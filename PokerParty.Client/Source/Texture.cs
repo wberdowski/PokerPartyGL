@@ -3,6 +3,10 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using Image = SixLabors.ImageSharp.Image;
+using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 
 namespace PokerParty.Client
 {
@@ -49,6 +53,33 @@ namespace PokerParty.Client
             GL.TexParameter(TextureTarget.Texture2D, (TextureParameterName)All.TextureMaxAnisotropy, maxTextureMaxAnisotropy);
 
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, image.Width, image.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, pixels.ToArray());
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+
+            return tex;
+        }
+
+        public static Texture FromImage(Bitmap bitmap)
+        {
+            Texture tex = new Texture();
+            tex.Handle = GL.GenTexture();
+
+            List<byte> pixels = new List<byte>();
+
+            var data = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            tex.Use();
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            float maxTextureMaxAnisotropy = GL.GetFloat((GetPName)All.MaxTextureMaxAnisotropy);
+            GL.TexParameter(TextureTarget.Texture2D, (TextureParameterName)All.TextureMaxAnisotropy, maxTextureMaxAnisotropy);
+
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmap.Width, bitmap.Height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
+            bitmap.UnlockBits(data);
+
             GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
 
             return tex;

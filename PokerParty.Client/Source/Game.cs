@@ -5,7 +5,10 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace PokerParty.Client
 {
@@ -15,6 +18,7 @@ namespace PokerParty.Client
         public static Camera Camera { get; set; }
 
         private Shader stdShader;
+        private Shader uiShader;
         private float pitch;
         private float yaw = -90;
         Vector2? lastPos = null;
@@ -33,7 +37,7 @@ namespace PokerParty.Client
             {
                 Title = title,
                 Size = new Vector2i(width, height),
-                NumberOfSamples = 0
+                NumberOfSamples = 4
             })
         {
             MonitorInfo info;
@@ -43,7 +47,7 @@ namespace PokerParty.Client
             }
             CursorVisible = false;
             CursorGrabbed = true;
-            VSync = VSyncMode.Off;
+            VSync = VSyncMode.On;
 
             GL.ClearColor(skyColor.X, skyColor.Y, skyColor.Z, 1f);
             GL.Enable(EnableCap.DepthTest);
@@ -63,6 +67,8 @@ namespace PokerParty.Client
             Directory.CreateDirectory("world/data");
 
             stdShader = new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl");
+            uiShader = new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl");
+
             Camera = new Camera(
                 new Vector3(0, 1, 1),
                 Vector3.Zero,
@@ -96,87 +102,8 @@ namespace PokerParty.Client
             chairMesh.LoadFromObj("models/chair/chair.obj");
             var chairTex = Texture.FromFile("models/chair/textures/wood.jpg");
 
-            var dist = 0.8f;
-
             {
-                var obj = new GameObject(new Vector3(-0.7f, 0, dist));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(0, 0, dist));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(0.7f, 0, dist));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-
-
-            {
-                var obj = new GameObject(new Vector3(-0.7f, 0, -dist), Quaternion.FromAxisAngle(new Vector3(0,1,0), (float)Math.PI));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(0, 0, -dist), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)Math.PI));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(0.7f, 0, -dist), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)Math.PI));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-
-
-            {
-                var obj = new GameObject(new Vector3(-1.5f, 0, -dist/2), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)(Math.PI/4 + Math.PI)));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(-1.5f, 0, dist / 2), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)(-Math.PI /4f)));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-
-            {
-                var obj = new GameObject(new Vector3(1.5f, 0, -dist / 2), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)(-Math.PI / 4 - Math.PI)));
-                obj.Mesh = chairMesh;
-                obj.Albedo = chairTex;
-                obj.LoadToBuffer(stdShader);
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new GameObject(new Vector3(1.5f, 0, dist / 2), Quaternion.FromAxisAngle(new Vector3(0, 1, 0), (float)(Math.PI / 4f)));
+                var obj = new GameObject(new Vector3(0, 0, 0.8f));
                 obj.Mesh = chairMesh;
                 obj.Albedo = chairTex;
                 obj.LoadToBuffer(stdShader);
@@ -195,7 +122,7 @@ namespace PokerParty.Client
                 "6_of_clubs.png"
             };
 
-            for(int i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var obj = new GameObject(new Vector3(i * 0.1f + -0.2f, 0.74f, 0));
                 obj.Scale = new Vector3(1.3f);
@@ -205,12 +132,39 @@ namespace PokerParty.Client
                 gameObjects.Add(obj);
             }
 
+            // FONTS
+            {
+                var fontObj = new FontObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
+                fontObj.Layer = RenderLayer.UI;
+                fontObj.Anchor = UILayoutAnchor.BottomRight;
+                fontObj.Position = new Vector3(-(fontObj.Size.X + 10), fontObj.Size.Y + 10, 0);
+                fontObj.LoadToBuffer(uiShader);
+                gameObjects.Add(fontObj);
+            }
+
+            {
+                var fontObj = new FontObject("Fold [F]\nRise [R]\nCheck [C]", new Font("Segoe UI", 16f, FontStyle.Bold), new SolidBrush(Color.White));
+                fontObj.Layer = RenderLayer.UI;
+                fontObj.Anchor = UILayoutAnchor.BottomLeft;
+                fontObj.Position = new Vector3(10, fontObj.Size.Y + 10, 0);
+                fontObj.LoadToBuffer(uiShader);
+                gameObjects.Add(fontObj);
+            }
+
             base.OnLoad();
         }
 
         //
         //  UPDATE
         //
+
+        private void UpdateUILayout()
+        {
+            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI).Cast<FontObject>())
+            {
+                obj.UpdateModelMatrix();
+            }
+        }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
@@ -312,9 +266,27 @@ namespace PokerParty.Client
             stdShader.SetMatrix4("view", Camera.View);
             stdShader.SetMatrix4("projection", Camera.Projection);
 
-            foreach (var obj in gameObjects)
+            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
                 stdShader.SetMatrix4("model", obj.ModelMatrix);
+                if (obj.Albedo != null)
+                {
+                    obj.Albedo.Use();
+                }
+                else
+                {
+                    GL.BindTexture(TextureTarget.Texture2D, 0);
+                }
+                obj.Draw();
+            }
+
+            uiShader.Use();
+            uiShader.SetMatrix4("view", Camera.View);
+            uiShader.SetMatrix4("projection", Camera.ProjectionUI);
+
+            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI))
+            {
+                uiShader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
                 if (obj.Albedo != null)
                 {
                     obj.Albedo.Use();
@@ -338,6 +310,8 @@ namespace PokerParty.Client
         {
             Camera.Bounds = new Box2i(0, 0, e.Width, e.Height);
             GL.Viewport(0, 0, e.Width, e.Height);
+
+            UpdateUILayout();
 
             base.OnResize(e);
         }
