@@ -156,10 +156,10 @@ namespace PokerParty.Client
                 obj.Shader = cardShader;
                 obj.Mesh = cardMesh;
                 obj.LoadToBuffer();
-                obj.InstanceData = new float[] {
-                   0.0f, 0.0f, 0.0f, 0,
-                   0.1f, 0.0f, 0.0f, 1,
-                   0.2f, 0.0f, 0.0f, 2
+                obj.Instances = new CardInstanceData[] {
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0,0,0)), 0),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.1f,0,0)), 1),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.2f,0,0)), 10),
                 };
                 obj.LoadInstanceDataBuffer();
                 cards.Add(obj);

@@ -2,7 +2,8 @@
 in vec3 aPos;
 in vec2 aTexCoord;
 in vec3 aNormal;
-in vec3 aOffset;
+
+in mat4 aMat;
 in float aTexId;
 
 uniform mat4 model;
@@ -15,7 +16,7 @@ flat out int TexId;
 
 void main()
 {
-    gl_Position = projection * view * model * vec4(aPos + aOffset, 1.0);
+    gl_Position = projection * view * model * aMat * vec4(aPos, 1.0);
 
     TexCoord = aTexCoord;
     Normal = aNormal;
