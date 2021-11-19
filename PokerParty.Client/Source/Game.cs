@@ -28,6 +28,7 @@ namespace PokerParty.Client
         public bool WireframeEnabled { get; private set; }
         private Vector3 skyColor = new Vector3(0.5f, 0.9f, 1f);
         private List<GameObject> gameObjects = new List<GameObject>();
+        private List<CardObject> cards = new List<CardObject>();
         private float speed = 1;
 
         public Game(int width, int height, string title) : base(
@@ -155,17 +156,13 @@ namespace PokerParty.Client
                 obj.Shader = cardShader;
                 obj.Mesh = cardMesh;
                 obj.LoadToBuffer();
-                gameObjects.Add(obj);
-            }
-
-            {
-                var obj = new CardObject(new Vector3(0.1f, 0.74f, 0));
-                obj.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Num2);
-                obj.Layer = RenderLayer.Card;
-                obj.Shader = cardShader;
-                obj.Mesh = cardMesh;
-                obj.LoadToBuffer();
-                gameObjects.Add(obj);
+                obj.InstanceData = new float[] {
+                   0.0f, 0.0f, 0.0f, 0,
+                   0.1f, 0.0f, 0.0f, 1,
+                   0.2f, 0.0f, 0.0f, 2
+                };
+                obj.LoadInstanceDataBuffer();
+                cards.Add(obj);
             }
 
             Console.WriteLine("Assets loaded");
@@ -281,14 +278,12 @@ namespace PokerParty.Client
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-
-            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Card).Cast<CardObject>())
+            foreach (var obj in cards)
             {
                 obj.Shader.Use();
                 obj.Shader.SetMatrix4("view", Camera.View);
                 obj.Shader.SetMatrix4("projection", Camera.Projection);
                 obj.Shader.SetMatrix4("model", obj.ModelMatrix);
-                obj.Shader.SetInt("texId", CardDeck.cards[obj.CardType]);
 
                 GL.BindTexture(TextureTarget.Texture2DArray, CardDeck.Texture.Handle);
 
