@@ -4,7 +4,7 @@
     {
         public static void Main(string[] args)
         {
-            new Game(1280, 720, "PokerParty");
+            new Window(1280, 720, "PokerParty");
         }
     }
 }

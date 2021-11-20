@@ -10,6 +10,11 @@ namespace PokerParty.Client
         public static Dictionary<PlayingCard, int> cards = new Dictionary<PlayingCard, int>();
         public static Texture3D Texture { get; private set; }
 
+        public static int GetId(PlayingCard.CardColor c, PlayingCard.CardValue v)
+        {
+            return cards[new PlayingCard(c, v)];
+        }
+
         public static void Load()
         {
             var colors = Enum.GetNames(typeof(PlayingCard.CardColor));
@@ -45,6 +50,8 @@ namespace PokerParty.Client
                     }
                 }
             }
+
+            Texture.GenerateMipmaps();
         }
     }
 }

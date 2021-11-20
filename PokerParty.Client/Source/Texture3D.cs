@@ -21,7 +21,7 @@ namespace PokerParty.Client
 
             GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
             GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
             GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
             //float maxTextureMaxAnisotropy = GL.GetFloat((GetPName)0x84FF);
@@ -68,6 +68,11 @@ namespace PokerParty.Client
             {
                 throw new Exception("Tried to exceed object capacity.");
             }
+        }
+
+        public void GenerateMipmaps()
+        {
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2DArray);
         }
 
         public void Use()

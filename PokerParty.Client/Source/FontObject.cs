@@ -31,15 +31,15 @@ namespace PokerParty.Client
             }
             else if (Anchor == UILayoutAnchor.TopRight)
             {
-                offset = new Vector3(Game.Camera.Bounds.Size.X, 0, 0);
+                offset = new Vector3(Window.Camera.Bounds.Size.X, 0, 0);
             }
             else if (Anchor == UILayoutAnchor.BottomLeft)
             {
-                offset = new Vector3(0, -Game.Camera.Bounds.Size.Y, 0);
+                offset = new Vector3(0, -Window.Camera.Bounds.Size.Y, 0);
             }
             else if (Anchor == UILayoutAnchor.BottomRight)
             {
-                offset = new Vector3(Game.Camera.Bounds.Size.X, -Game.Camera.Bounds.Size.Y, 0);
+                offset = new Vector3(Window.Camera.Bounds.Size.X, -Window.Camera.Bounds.Size.Y, 0);
             }
 
             ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position + offset);

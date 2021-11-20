@@ -5,25 +5,30 @@ using System.Runtime.InteropServices;
 
 namespace PokerParty.Client
 {
-    public class CardObject : GameObject
+    public class CardCollectionObject : GameObject
     {
         public PlayingCard CardType { get; set; }
-        public int InstanceVBO;
+        public int? InstanceVBO;
         public CardInstanceData[] Instances;
 
-        public CardObject(Vector3 position) : base(position)
+        public CardCollectionObject(Vector3 position) : base(position)
         {
 
         }
 
-        public void LoadInstanceDataBuffer()
+        public void UpdateInstanceDataBuffer()
         {
+            if(InstanceVBO != null)
+            {
+                GL.DeleteBuffer((int)InstanceVBO);
+            }
+
             GL.BindVertexArray(VAO);
 
             var structSize = Marshal.SizeOf<CardInstanceData>();
 
             InstanceVBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, InstanceVBO);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, (int)InstanceVBO);
             GL.BufferData(BufferTarget.ArrayBuffer, Instances.Length * structSize, Instances, BufferUsageHint.StaticDraw);
 
             var aMatLoc = Shader.GetAttribLocation("aMat");
@@ -48,6 +53,11 @@ namespace PokerParty.Client
             if (Mesh == null)
             {
                 throw new Exception("Mesh cannot be null.");
+            }
+
+            if (Instances == null)
+            {
+                return;
             }
 
             GL.BindVertexArray(VAO);
