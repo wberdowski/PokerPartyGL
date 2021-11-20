@@ -2,13 +2,25 @@
 {
     public struct PlayingCard
     {
-        public CardColor Color { get; set; }
-        public CardValue Value { get; set; }
+        public CardColor Color { get; }
+        public CardValue Value { get; }
+        public byte Index { get; }
 
         public PlayingCard(CardColor color, CardValue value)
         {
             Color = color;
             Value = value;
+            Index = (byte)((byte)color * 13 + (byte)value);
+        }
+
+        public static PlayingCard GetByIndex(byte index)
+        {
+            return new PlayingCard((CardColor)(index / 13), (CardValue)(index % 13));
+        }
+
+        public static byte GetIndexByColorValue(CardColor color, CardValue value)
+        {
+            return (byte)((byte)color * 13 + (byte)value);
         }
 
         public enum CardColor : byte
@@ -21,19 +33,19 @@
 
         public enum CardValue : byte
         {
-            Num2 = 2,
-            Num3 = 3,
-            Num4 = 4,
-            Num5 = 5,
-            Num6 = 6,
-            Num7 = 7,
-            Num8 = 8,
-            Num9 = 9,
-            Num10 = 10,
-            Jack = 11,
-            Queen = 12,
-            King = 13,
-            Ace = 14,
+            Num2,
+            Num3,
+            Num4,
+            Num5,
+            Num6,
+            Num7,
+            Num8,
+            Num9,
+            Num10,
+            Jack,
+            Queen,
+            King,
+            Ace,
         }
     }
 }

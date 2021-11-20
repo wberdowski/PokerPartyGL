@@ -15,6 +15,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using static PokerParty.Client.PlayingCard;
 using static PokerParty.Common.ControlPacket;
 
 namespace PokerParty.Client
@@ -165,7 +166,6 @@ namespace PokerParty.Client
             {
                 cards = new CardCollectionObject(new Vector3(0, 0.74f, 0));
                 cards.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
-                cards.Scale = new Vector3(2);
                 cards.Layer = RenderLayer.Card;
                 cards.Shader = cardShader;
                 cards.Mesh = cardMesh;
@@ -173,14 +173,10 @@ namespace PokerParty.Client
 
 
                 cards.Instances = new CardInstanceData[] {
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0,0,0)), 0),
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.1f,0,0)), 1),
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.2f,0,0)), 10),
-                };
-                cards.UpdateInstanceDataBuffer();
-
-                cards.Instances = new CardInstanceData[] {
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(1f,0,0)), CardDeck.GetId(PlayingCard.CardColor.Hearts, PlayingCard.CardValue.Jack)),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Clubs, CardValue.Jack)),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.1f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Hearts, CardValue.Queen)),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.2f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Spades, CardValue.King)),
+                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.3f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Spades, CardValue.Ace)),
                 };
                 cards.UpdateInstanceDataBuffer();
             }
@@ -192,16 +188,20 @@ namespace PokerParty.Client
 
         private void OnConnect(IAsyncResult ar)
         {
-            controlSocket.EndConnect(ar);
+            try
+            {
+                controlSocket.EndConnect(ar);
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine("Cannot connect");
+            }
+
             if (controlSocket.Connected)
             {
                 Console.WriteLine("Connected.");
 
                 SendLoginRequest();
-            }
-            else
-            {
-                Console.WriteLine("Cannot connect.");
             }
         }
 
