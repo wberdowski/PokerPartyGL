@@ -1,11 +1,12 @@
 ﻿using OpenTK.Graphics.OpenGL4;
+using PokerParty.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
 
 namespace PokerParty.Client
 {
-    public static class CardDeck
+    public static class CardDeckLoader
     {
         public static Dictionary<PlayingCard, int> cards = new Dictionary<PlayingCard, int>();
         public static Texture3D Texture { get; private set; }

@@ -13,10 +13,14 @@ namespace PokerParty.Client
         public Vector2i Size { get; private set; }
         public Bitmap Image { get; private set; }
         public UILayoutAnchor Anchor { get; set; }
+        public Font Font { get; }
+        public Brush Brush { get; }
 
         public FontObject(string text, Font font, Brush brush) : base()
         {
             Generate(text, font, brush);
+            Font = font;
+            Brush = brush;
             Layer = RenderLayer.UI;
             Anchor = UILayoutAnchor.TopLeft;
         }
@@ -43,6 +47,11 @@ namespace PokerParty.Client
             }
 
             ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position + offset);
+        }
+
+        public void Generate(string text)
+        {
+            Generate(text, Font, Brush);
         }
 
         public void Generate(string text, Font font, Brush brush)
@@ -116,5 +125,9 @@ namespace PokerParty.Client
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
         }
 
+        internal void DeleteBuffer()
+        {
+            GL.DeleteBuffer(VBO);
+        }
     }
 }

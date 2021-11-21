@@ -1,5 +1,6 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using PokerParty.Common;
 using System;
 using System.Runtime.InteropServices;
 

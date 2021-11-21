@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using static PokerParty.Common.ControlPacket;
+using static PokerParty.Common.PlayingCard;
 
 namespace PokerParty.Server
 {
@@ -15,6 +16,9 @@ namespace PokerParty.Server
         private static IPEndPoint controlEp;
         private static byte[] recvBuff = new byte[16 * 1024];
         private static Dictionary<Socket, ClientData> clients = new Dictionary<Socket, ClientData>();
+        private static Random rand = new Random();
+
+        private static GameState gameState;
 
         public static void Main(string[] args)
         {
@@ -48,6 +52,22 @@ namespace PokerParty.Server
                     {
                         return;
                     }
+                    else if (cmdArgs[0] == "s")
+                    {
+                        gameState = new GameState();
+                        gameState.isActive = true;
+                        gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
+
+                        gameState.cardsOnTheTable = new PlayingCard[]
+                        {
+                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                            PlayingCard.GetByIndex((byte)rand.Next(0, 51))
+                        };
+                        BroadcastGameState();
+                    }
                     else
                     {
                         Console.WriteLine($"Unknown command: {cmdArgs[0]}");
@@ -57,10 +77,13 @@ namespace PokerParty.Server
 
             Console.WriteLine("Stopping server...");
 
-            foreach (var client in clients.Keys)
+            lock (clients)
             {
-                client.Close();
-                client.Dispose();
+                foreach (var client in clients.Keys)
+                {
+                    client.Close();
+                    client.Dispose();
+                }
             }
 
             controlSocket.Close();
@@ -118,12 +141,12 @@ namespace PokerParty.Server
                     if (username.Length < 3 || username.Length > 32)
                     {
                         var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameIsInvalid);
-                        clientSocket.Send(BinarySerializer.Serialize(resPacket));
+                        NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                     }
                     else if (clients.Values.Where(x => x.PlayerData != null && x.PlayerData.Nickname == username).Count() > 0)
                     {
                         var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameTaken);
-                        clientSocket.Send(BinarySerializer.Serialize(resPacket));
+                        NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                     }
                     else
                     {
@@ -132,12 +155,12 @@ namespace PokerParty.Server
                             data.Authorized = true;
                             data.PlayerData = new PlayerData(username);
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
-                            clientSocket.Send(BinarySerializer.Serialize(resPacket));
+                            NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                         }
                         else
                         {
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.Unknown);
-                            clientSocket.Send(BinarySerializer.Serialize(resPacket));
+                            NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                         }
                     }
                 }
@@ -149,9 +172,67 @@ namespace PokerParty.Server
         private static void DisconnectClient(Socket clientSocket)
         {
             Console.WriteLine($"Client disconnected: {(IPEndPoint)clientSocket.RemoteEndPoint}");
-            clients.Remove(clientSocket);
+
+            // Broadcast new game state
+
+            if (clients.TryGetValue(clientSocket, out var clientData))
+            {
+                clients.Remove(clientSocket);
+
+                if (clientData.PlayerData != null && gameState != null)
+                {
+                    var playerInstance = gameState.players.Where(x => x.Nickname == clientData.PlayerData.Nickname);
+
+                    foreach (var player in playerInstance)
+                    {
+                        player.Online = false;
+                    }
+
+                    BroadcastGameState();
+                }
+            }
+
             clientSocket.Close();
             clientSocket.Dispose();
+        }
+
+        private static void BroadcastGameState()
+        {
+            var payload = BinarySerializer.Serialize(gameState);
+
+            Console.WriteLine("GAME STATE: " + BitConverter.ToString(payload));
+
+            var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
+
+            Console.WriteLine("PACKET: " + BitConverter.ToString(packet));
+
+            lock (clients)
+            {
+                foreach (var c in clients)
+                {
+                    NonBlockingSend(c.Key, packet);
+                }
+            }
+        }
+
+        private static void NonBlockingSend(Socket socket, byte[] data)
+        {
+            socket.BeginSend(data, 0, data.Length, SocketFlags.None, OnSend, socket);
+        }
+
+        private static void OnSend(IAsyncResult ar)
+        {
+            var clientSocket = (Socket)ar.AsyncState;
+
+            try
+            {
+                clientSocket.EndSend(ar);
+            }
+            catch (SocketException ex)
+            {
+                DisconnectClient(clientSocket);
+                return;
+            }
         }
     }
 }

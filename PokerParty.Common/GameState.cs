@@ -2,7 +2,8 @@
 {
     public class GameState
     {
-        public bool IsActive { get;}
-        public PlayerData[] Players { get;}
+        public bool isActive;
+        public PlayerData[] players;
+        public PlayingCard[] cardsOnTheTable;
     }
 }

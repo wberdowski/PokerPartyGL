@@ -1,4 +1,5 @@
 ﻿using BitSerializer;
+using System.Windows.Forms;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -15,8 +16,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using static PokerParty.Client.PlayingCard;
 using static PokerParty.Common.ControlPacket;
+using static PokerParty.Common.PlayingCard;
 
 namespace PokerParty.Client
 {
@@ -25,6 +26,7 @@ namespace PokerParty.Client
         public static TimeSpan DeltaTime { get; private set; }
         public static Camera Camera { get; set; }
 
+        private Random rand = new Random();
         private Shader stdShader;
         private Shader uiShader;
         private Shader cardShader;
@@ -33,13 +35,22 @@ namespace PokerParty.Client
         Vector2? lastPos = null;
         private float sensitivity = 0.1f;
         public bool WireframeEnabled { get; private set; }
+        public string Username { get; private set; }
+
         private Vector3 skyColor = new Vector3(0.5f, 0.9f, 1f);
         private List<GameObject> gameObjects = new List<GameObject>();
-        private CardCollectionObject cards;
+        private CardCollectionObject cardCollection;
         private float speed = 1;
 
         private Socket controlSocket;
         private byte[] recvBuff = new byte[16 * 1024];
+
+        // NET STATE
+        private bool isAutorized;
+        private GameState gameState;
+
+        private volatile bool gameStateUpdatePending;
+        private FontObject playersListObj;
 
         public Window(int width, int height, string title) : base(
             new GameWindowSettings()
@@ -78,11 +89,11 @@ namespace PokerParty.Client
         {
             Directory.CreateDirectory("world/data");
 
-            stdShader = new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl");
+            stdShader = new Shader("shaders/standard2/vert.glsl", "shaders/standard/frag.glsl");
             uiShader = new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl");
             cardShader = new Shader("shaders/card/vert.glsl", "shaders/card/frag.glsl");
 
-            controlSocket = new Socket(SocketType.Stream, ProtocolType.IP);
+            controlSocket = new Socket(SocketType.Rdm, ProtocolType.IP);
             controlSocket.ReceiveTimeout = 10000;
             controlSocket.SendTimeout = 10000;
             controlSocket.BeginConnect(new IPEndPoint(IPAddress.Loopback, 55555), OnConnect, null);
@@ -98,7 +109,7 @@ namespace PokerParty.Client
 
             Console.WriteLine("Loading assets...");
             var sw = Stopwatch.StartNew();
-            CardDeck.Load();
+            CardDeckLoader.Load();
             sw.Stop();
             Console.WriteLine("Card deck loaded in " + sw.ElapsedMilliseconds + " ms");
 
@@ -158,27 +169,28 @@ namespace PokerParty.Client
                 gameObjects.Add(fontObj);
             }
 
+            {
+                playersListObj = new FontObject("Players (0):", new Font("Segoe UI", 12f, FontStyle.Bold), new SolidBrush(Color.White));
+                playersListObj.Shader = uiShader;
+                playersListObj.Layer = RenderLayer.UI;
+                playersListObj.Anchor = UILayoutAnchor.TopLeft;
+                playersListObj.Position = new Vector3(10, -10, 0);
+                playersListObj.LoadToBuffer();
+                gameObjects.Add(playersListObj);
+            }
+
             // CARDS
 
             var cardMesh = new Mesh();
             cardMesh.LoadFromObj("models/card/card.obj");
 
             {
-                cards = new CardCollectionObject(new Vector3(0, 0.74f, 0));
-                cards.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
-                cards.Layer = RenderLayer.Card;
-                cards.Shader = cardShader;
-                cards.Mesh = cardMesh;
-                cards.LoadToBuffer();
-
-
-                cards.Instances = new CardInstanceData[] {
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Clubs, CardValue.Jack)),
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.1f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Hearts, CardValue.Queen)),
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.2f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Spades, CardValue.King)),
-                   new CardInstanceData(Matrix4.CreateTranslation(new Vector3(0.3f,0,0)), PlayingCard.GetIndexByColorValue(CardColor.Spades, CardValue.Ace)),
-                };
-                cards.UpdateInstanceDataBuffer();
+                cardCollection = new CardCollectionObject(new Vector3(0, 0.74f, 0));
+                cardCollection.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
+                cardCollection.Layer = RenderLayer.Card;
+                cardCollection.Shader = cardShader;
+                cardCollection.Mesh = cardMesh;
+                cardCollection.LoadToBuffer();
             }
 
             Console.WriteLine("Assets loaded");
@@ -207,27 +219,59 @@ namespace PokerParty.Client
 
         private async void SendLoginRequest()
         {
-            var packet = new ControlPacket(OpCode.LoginRequest, Encoding.UTF8.GetBytes("Username123"));
+            Username = "User" + rand.Next(1111, 9999);
+            var packet = new ControlPacket(OpCode.LoginRequest, Encoding.UTF8.GetBytes(Username));
             await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
 
-            var len = await controlSocket.ReceiveAsync(recvBuff, SocketFlags.None);
+            controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);
+        }
 
-            if (len > 0)
+        private void OnControlReceive(IAsyncResult ar)
+        {
+            var len = controlSocket.EndReceive(ar);
+
+            var resPacket = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
+
+            if (resPacket.Code == OpCode.LoginResponse)
             {
-                var resPacket = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
-
-                if (resPacket.Code == OpCode.LoginResponse)
+                if (resPacket.Status == OpStatus.Success)
                 {
-                    if (resPacket.Status == OpStatus.Success)
-                    {
-                        Console.WriteLine("Nickname registered.");
-                    }
-                    else if (resPacket.Status == OpStatus.Failure)
-                    {
-                        Console.WriteLine($"Nickname register error: {resPacket.GetError()}.");
-                    }
+                    isAutorized = true;
+                    Console.WriteLine($"Nickname \"{Username}\" registered.");
+                }
+                else if (resPacket.Status == OpStatus.Failure)
+                {
+                    Console.WriteLine($"Nickname register error: {resPacket.GetError()}.");
                 }
             }
+            else if (resPacket.Code == OpCode.GameStateUpdate)
+            {
+                gameState = BinarySerializer.Deserialize<GameState>(resPacket.Payload);
+                gameStateUpdatePending = true;
+            }
+
+            controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);
+        }
+
+        private void UpdateGameState()
+        {
+            // Update player list
+            playersListObj.Generate($"Players ({gameState.players.Length}):\n{string.Join('\n', gameState.players.Select(x => $"{x.Nickname} [{x.Online}]"))}");
+            playersListObj.DeleteBuffer();
+            playersListObj.LoadToBuffer();
+
+            // Update cards on the table
+
+            CardInstanceData[] c = new CardInstanceData[gameState.cardsOnTheTable.Length];
+
+            for (int i = 0; i < c.Length; i++)
+            {
+                var card = gameState.cardsOnTheTable[i];
+                c[i] = new CardInstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f, 0, 0)), card.index);
+            }
+
+            cardCollection.Instances = c;
+            cardCollection.UpdateInstanceDataBuffer();
         }
 
         //
@@ -244,6 +288,12 @@ namespace PokerParty.Client
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
+            if (gameStateUpdatePending)
+            {
+                gameStateUpdatePending = false;
+                UpdateGameState();
+            }
+
             if (pitch > 89.0f)
             {
                 pitch = 89.0f;
@@ -260,37 +310,37 @@ namespace PokerParty.Client
 
             Camera.UpdateMatrix();
 
-            if (KeyboardState.IsKeyDown(Keys.W))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W))
             {
                 Camera.Position += new Vector3(Camera.Front.X, 0, Camera.Front.Z).Normalized() * speed * (float)e.Time; //Forward 
             }
 
-            if (KeyboardState.IsKeyDown(Keys.S))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S))
             {
                 Camera.Position -= new Vector3(Camera.Front.X, 0, Camera.Front.Z).Normalized() * speed * (float)e.Time; //Backwards
             }
 
-            if (KeyboardState.IsKeyDown(Keys.A))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A))
             {
                 Camera.Position -= Vector3.Normalize(Vector3.Cross(Camera.Front, Camera.Up)) * speed * (float)e.Time; //Left
             }
 
-            if (KeyboardState.IsKeyDown(Keys.D))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D))
             {
                 Camera.Position += Vector3.Normalize(Vector3.Cross(Camera.Front, Camera.Up)) * speed * (float)e.Time; //Right
             }
 
-            if (KeyboardState.IsKeyDown(Keys.Space))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Space))
             {
                 Camera.Position += Camera.Up * speed * (float)e.Time; //Up 
             }
 
-            if (KeyboardState.IsKeyDown(Keys.LeftControl))
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.LeftControl))
             {
                 Camera.Position -= Camera.Up * speed * (float)e.Time; //Down
             }
 
-            if (KeyboardState.IsKeyReleased(Keys.G))
+            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.G))
             {
                 WireframeEnabled = !WireframeEnabled;
 
@@ -308,7 +358,7 @@ namespace PokerParty.Client
                 }
             }
 
-            if (KeyboardState.IsKeyReleased(Keys.F11))
+            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.F11))
             {
                 if (WindowState != WindowState.Maximized)
                 {
@@ -320,7 +370,7 @@ namespace PokerParty.Client
                 }
             }
 
-            if (KeyboardState.IsKeyReleased(Keys.Escape))
+            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape))
             {
                 Close();
             }
@@ -338,13 +388,13 @@ namespace PokerParty.Client
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            cards.Shader.Use();
-            cards.Shader.SetMatrix4("view", Camera.View);
-            cards.Shader.SetMatrix4("projection", Camera.Projection);
-            cards.Shader.SetMatrix4("model", cards.ModelMatrix);
+            cardCollection.Shader.Use();
+            cardCollection.Shader.SetMatrix4("view", Camera.View);
+            cardCollection.Shader.SetMatrix4("projection", Camera.Projection);
+            cardCollection.Shader.SetMatrix4("model", cardCollection.ModelMatrix);
 
-            GL.BindTexture(TextureTarget.Texture2DArray, CardDeck.Texture.Handle);
-            cards.Draw();
+            GL.BindTexture(TextureTarget.Texture2DArray, CardDeckLoader.Texture.Handle);
+            cardCollection.Draw();
 
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
@@ -363,7 +413,6 @@ namespace PokerParty.Client
                 }
                 obj.Draw();
             }
-
             // UI
 
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI))

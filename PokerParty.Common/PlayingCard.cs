@@ -1,16 +1,20 @@
-﻿namespace PokerParty.Client
+﻿namespace PokerParty.Common
 {
     public struct PlayingCard
     {
-        public CardColor Color { get; }
-        public CardValue Value { get; }
-        public byte Index { get; }
+        public CardColor color => (CardColor)(index / 13);
+        public CardValue value => (CardValue)(index % 13);
+
+        public byte index;
+
+        public PlayingCard()
+        {
+            index = 0;
+        }
 
         public PlayingCard(CardColor color, CardValue value)
         {
-            Color = color;
-            Value = value;
-            Index = (byte)((byte)color * 13 + (byte)value);
+            index = (byte)((byte)color * 13 + (byte)value);
         }
 
         public static PlayingCard GetByIndex(byte index)
