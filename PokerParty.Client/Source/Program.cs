@@ -19,7 +19,9 @@ namespace PokerParty.Client
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-#if !DEBUG
+#if DEBUG
+return;
+#endif
             var ex = (Exception)e.ExceptionObject;
 
             var report = $"Source: {ex.Source}\nCode: 0x{ex.HResult:X4}\nEntry point: {ex.TargetSite?.Name}\nMessage: {ex.Message}\nStack trace:\n{ex.StackTrace}";
@@ -35,7 +37,8 @@ namespace PokerParty.Client
                     State = TaskDialogProgressBarState.Marquee
                 },
                 Buttons = {
-                    TaskDialogButton.Close
+                    TaskDialogButton.Close,
+                    new TaskDialogButton("Open crash report file")
                 },
                 Icon = TaskDialogIcon.ShieldErrorRedBar,
                 Expander = new TaskDialogExpander()
@@ -47,11 +50,12 @@ namespace PokerParty.Client
                 {
                     Text = "Report is being uploaded to the PokerParty developers. Please do not close this window.",
                     Icon = TaskDialogIcon.ShieldWarningYellowBar
-                }
+                },
                 // TODO: Upload
             };
 
             page.Buttons[0].Enabled = false;
+            page.Buttons[1].Enabled = false;
 
             Task.Run(async () =>
             {
@@ -65,6 +69,8 @@ namespace PokerParty.Client
                 await Task.Delay(1000);
 
                 page.Buttons[0].Enabled = true;
+                page.Buttons[1].Enabled = true;
+                page.DefaultButton = page.Buttons[0];
 
                 page.ProgressBar.State = TaskDialogProgressBarState.Normal;
                 page.ProgressBar.Value = 100;
@@ -73,9 +79,14 @@ namespace PokerParty.Client
                 page.Footnote.Icon = TaskDialogIcon.ShieldSuccessGreenBar;
             });
 
-            TaskDialog.ShowDialog(page);
-#endif
+            var result = TaskDialog.ShowDialog(page);
 
+            if (result == page.Buttons[1])
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("crashreport.log");
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+            }
         }
 
     }

@@ -6,6 +6,6 @@
         UI,
         Standard,
         Transparent,
-        Card
+        Instanced
     }
 }

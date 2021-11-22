@@ -32,7 +32,7 @@ namespace PokerParty.Client
             //GL.TexParameter(TextureTarget.Texture2D, (TextureParameterName)All.TextureMaxAnisotropyExt, maxTextureMaxAnisotropy);
 
             GL.TexImage3D(TextureTarget.Texture2DArray, 0, PixelInternalFormat.Rgba, width, height, capacity, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-
+            GL.BindTexture(TextureTarget.Texture2DArray, 0);
         }
 
         public void LoadAndAdd(int index, string filepath)

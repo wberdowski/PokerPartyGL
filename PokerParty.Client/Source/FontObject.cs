@@ -1,6 +1,7 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -113,7 +114,7 @@ namespace PokerParty.Client
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
             GL.BufferData(BufferTarget.ArrayBuffer, Mesh.Vertices.Length * sizeof(float), Mesh.Vertices, BufferUsageHint.StaticDraw);
 
-            Console.WriteLine($"Load model: {Mesh.Vertices.Length * sizeof(float):n0} B");
+            Debug.WriteLine($"Load model: {Mesh.Vertices.Length * sizeof(float):n0} B");
 
             // Attributes
             int vertexLocation = Shader.GetAttribLocation("aPos");

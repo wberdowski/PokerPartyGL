@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace PokerParty.Client
@@ -27,8 +28,8 @@ namespace PokerParty.Client
 
         public void MemoryInit(IEnumerable<T> data)
         {
-            // Console.WriteLine("> MemoryInit");
-            // Console.WriteLine("\tFragments #: " + data.Count());
+            // Debug.WriteLine("> MemoryInit");
+            // Debug.WriteLine("\tFragments #: " + data.Count());
             int offset = 0;
 
             foreach (var d in data)
@@ -42,8 +43,8 @@ namespace PokerParty.Client
 
             BufferSizeInBytes = offset + FreeBufferSizeInBytes;
 
-            // Console.WriteLine("\tBUFFER SIZE: {0:n0}", BufferSizeInBytes);
-            // Console.WriteLine();
+            // Debug.WriteLine("\tBUFFER SIZE: {0:n0}", BufferSizeInBytes);
+            // Debug.WriteLine();
         }
 
         public byte[] GenData()
@@ -63,13 +64,13 @@ namespace PokerParty.Client
 
         public void MemoryRemove(T data)
         {
-            // Console.WriteLine("> MemoryRemove: " + data.ToString());
+            // Debug.WriteLine("> MemoryRemove: " + data.ToString());
 
             var fragment = fragments.Where(x => x.Pointer == data).DefaultIfEmpty(null).FirstOrDefault();
 
             if (fragment != null)
             {
-                // Console.WriteLine("\t Deallocating: " + fragment);
+                // Debug.WriteLine("\t Deallocating: " + fragment);
                 fragment.Pointer = null;
 
                 var idx = fragments.IndexOf(fragment);
@@ -94,13 +95,13 @@ namespace PokerParty.Client
                     MergeFragments(idx, idx + 1);
                 }
 
-                // Console.WriteLine();
+                // Debug.WriteLine();
             }
         }
 
         public void MergeFragments(int idx1, int idx2)
         {
-            // Console.WriteLine("> Merge: " + idx1 + "+" + idx2);
+            // Debug.WriteLine("> Merge: " + idx1 + "+" + idx2);
 
             var s2 = fragments[idx2].SizeInBytes;
             fragments.RemoveAt(idx2);
@@ -110,7 +111,7 @@ namespace PokerParty.Client
 
         public MemoryFragment<T> MemoryAdd(T data, ReallocateCopy reallocAction)
         {
-            // Console.WriteLine("> MemoryAdd: " + data);
+            // Debug.WriteLine("> MemoryAdd: " + data);
 
             int size = data.MemorySizeBytes;
             var fragment = MemoryAlloc(size, reallocAction);
@@ -130,7 +131,7 @@ namespace PokerParty.Client
 
         public void MemoryConsolidate(ConsolidateSetupBuffer setupBuffer, ConsolidateCopy consolidateAction)
         {
-            Console.WriteLine("> Consolidate memory");
+            Debug.WriteLine("> Consolidate memory");
             var oldSize = BufferSizeInBytes;
             var empty = fragments.Where(x => x.Pointer == null).ToList();
 
@@ -160,13 +161,13 @@ namespace PokerParty.Client
             // Add free buffer at the end
             fragments.Add(new MemoryFragment<T>(offset, FreeBufferSizeInBytes, null));
 
-            Console.WriteLine("\tBUFFER SIZE: {0:n0} -> {1:n0} (Saved {2:n0} bytes))", oldSize, BufferSizeInBytes, oldSize - BufferSizeInBytes);
-            Console.WriteLine();
+            Debug.WriteLine("\tBUFFER SIZE: {0:n0} -> {1:n0} (Saved {2:n0} bytes))", oldSize, BufferSizeInBytes, oldSize - BufferSizeInBytes);
+            Debug.WriteLine("");
         }
 
         public MemoryFragment<T> MemoryAlloc(int allocSize, ReallocateCopy reallocAction)
         {
-            // Console.WriteLine("> MemoryAlloc: Size: {0:n0}", allocSize);
+            // Debug.WriteLine("> MemoryAlloc: Size: {0:n0}", allocSize);
 
             bool found = false;
             MemoryFragment<T> fragment = null;
@@ -183,12 +184,12 @@ namespace PokerParty.Client
             if (found)
             {
                 // Allocate in fragment
-                // Console.WriteLine("\tFound: Off: " + fragment.OffsetBytes);
+                // Debug.WriteLine("\tFound: Off: " + fragment.OffsetBytes);
                 return fragment;
             }
 
-            // Console.WriteLine("No free fragments. Reallocating buffer...");
-            // Console.WriteLine();
+            // Debug.WriteLine("No free fragments. Reallocating buffer...");
+            // Debug.WriteLine();
 
             MemoryReallocate(BufferSizeInBytes + allocSize, reallocAction);
 
@@ -198,7 +199,7 @@ namespace PokerParty.Client
         public void MemoryReallocate(int newSize, ReallocateCopy reallocAction)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"> Reallocate: {BufferSizeInBytes:n0} -> {newSize:n0}");
+            Debug.WriteLine($"> Reallocate: {BufferSizeInBytes:n0} -> {newSize:n0}");
 
             var oldSize = BufferSizeInBytes;
 
@@ -233,28 +234,28 @@ namespace PokerParty.Client
 
             reallocAction(oldSize, BufferSizeInBytes);
 
-            Console.WriteLine("\tNew buffer size: {0:n0}", BufferSizeInBytes);
-            Console.WriteLine();
+            Debug.WriteLine("\tNew buffer size: {0:n0}", BufferSizeInBytes);
+            Debug.WriteLine("");
             Console.ResetColor();
         }
 
         public void PrintMemoryFragments()
         {
             int idx = 0;
-            // Console.WriteLine("> Memory fragments:");
+            // Debug.WriteLine("> Memory fragments:");
             foreach (var s in fragments)
             {
-                // Console.WriteLine($"\t[{idx}] {s}");
+                // Debug.WriteLine($"\t[{idx}] {s}");
                 idx++;
             }
-            // Console.WriteLine();
+            // Debug.WriteLine();
 
             //foreach (var s in fragments)
             //{
-            //    // Console.WriteLine("    " + new string(' ', s.OffsetBytes) + s.OffsetBytes.ToString().PadRight(s.SizeBytes, '/'));
+            //    // Debug.WriteLine("    " + new string(' ', s.OffsetBytes) + s.OffsetBytes.ToString().PadRight(s.SizeBytes, '/'));
             //}
 
-            //// Console.WriteLine();
+            //// Debug.WriteLine();
             //// Console.Write("    ");
 
             //bool even = true;
@@ -275,8 +276,8 @@ namespace PokerParty.Client
             //}
 
             //// Console.ResetColor();
-            //// Console.WriteLine();
-            // Console.WriteLine();
+            //// Debug.WriteLine();
+            // Debug.WriteLine();
         }
 
         public class MemoryFragment<T>

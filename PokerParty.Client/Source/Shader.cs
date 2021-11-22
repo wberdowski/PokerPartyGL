@@ -2,6 +2,7 @@
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -49,7 +50,7 @@ namespace PokerParty.Client
             string infoLogVert = GL.GetShaderInfoLog(_vertexShaderHandle);
             if (infoLogVert != string.Empty)
             {
-                Console.WriteLine(infoLogVert);
+                Debug.WriteLine(infoLogVert);
             }
 
             GL.CompileShader(_fragmentShaderHandle);
@@ -58,7 +59,7 @@ namespace PokerParty.Client
 
             if (infoLogFrag != string.Empty)
             {
-                Console.WriteLine(infoLogFrag);
+                Debug.WriteLine(infoLogFrag);
             }
 
             // Create program

@@ -23,6 +23,7 @@ namespace PokerParty.Client
 {
     public class Window : GameWindow
     {
+        private const float TableHeight = 0.730712f;
         public static TimeSpan DeltaTime { get; private set; }
         public static Camera Camera { get; set; }
 
@@ -39,8 +40,8 @@ namespace PokerParty.Client
 
         private Vector3 skyColor = new Vector3(0.5f, 0.9f, 1f);
         private List<GameObject> gameObjects = new List<GameObject>();
-        private CardCollectionObject cardCollection;
-        private float speed = 1;
+        private InstanceCollection cardCollection;
+        private float speed = 1f;
 
         private Socket controlSocket;
         private byte[] recvBuff = new byte[16 * 1024];
@@ -51,6 +52,8 @@ namespace PokerParty.Client
 
         private volatile bool gameStateUpdatePending;
         private FontObject playersListObj;
+        private InstanceCollection chipCollection;
+        private Texture3D chipTexture;
 
         public Window(int width, int height, string title) : base(
             new GameWindowSettings()
@@ -60,7 +63,7 @@ namespace PokerParty.Client
             {
                 Title = title,
                 Size = new Vector2i(width, height),
-                NumberOfSamples = 0
+                NumberOfSamples = 4
             })
         {
             MonitorInfo info;
@@ -89,11 +92,11 @@ namespace PokerParty.Client
         {
             Directory.CreateDirectory("world/data");
 
-            stdShader = new Shader("shaders/standard2/vert.glsl", "shaders/standard/frag.glsl");
+            stdShader = new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl");
             uiShader = new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl");
             cardShader = new Shader("shaders/card/vert.glsl", "shaders/card/frag.glsl");
 
-            controlSocket = new Socket(SocketType.Rdm, ProtocolType.IP);
+            controlSocket = new Socket(SocketType.Stream, ProtocolType.IP);
             controlSocket.ReceiveTimeout = 10000;
             controlSocket.SendTimeout = 10000;
             controlSocket.BeginConnect(new IPEndPoint(IPAddress.Loopback, 55555), OnConnect, null);
@@ -107,11 +110,11 @@ namespace PokerParty.Client
                 80f
             );
 
-            Console.WriteLine("Loading assets...");
+            Debug.WriteLine("Loading assets...");
             var sw = Stopwatch.StartNew();
             CardDeckLoader.Load();
             sw.Stop();
-            Console.WriteLine("Card deck loaded in " + sw.ElapsedMilliseconds + " ms");
+            Debug.WriteLine("Card deck loaded in " + sw.ElapsedMilliseconds + " ms");
 
             stdShader.Use();
 
@@ -179,21 +182,55 @@ namespace PokerParty.Client
                 gameObjects.Add(playersListObj);
             }
 
+            // CHIPS
+
+            cardShader.Use();
+
+            var chipMesh = new Mesh();
+            chipMesh.LoadFromObj("models/chip/chip.obj");
+
+            chipTexture = new Texture3D(128, 128, 5);
+            chipTexture.LoadAndAdd(0, "models/chip/textures/black.png");
+            chipTexture.LoadAndAdd(1, "models/chip/textures/red.png");
+            chipTexture.LoadAndAdd(2, "models/chip/textures/green.png");
+            chipTexture.LoadAndAdd(3, "models/chip/textures/blue.png");
+            chipTexture.LoadAndAdd(4, "models/chip/textures/white.png");
+            chipTexture.GenerateMipmaps();
+
+            {
+                chipCollection = new InstanceCollection(new Vector3(0, TableHeight + 0.002f, 0.4f));
+                chipCollection.Layer = RenderLayer.Instanced;
+                chipCollection.Shader = cardShader;
+                chipCollection.Mesh = chipMesh;
+                chipCollection.LoadToBuffer();
+            }
+
+            chipCollection.Instances = new InstanceData[]
+            {
+                new InstanceData(Matrix4.CreateTranslation(0,   0,0), 0),
+                new InstanceData(Matrix4.CreateTranslation(0.05f,0,0), 1),
+                new InstanceData(Matrix4.CreateTranslation(0.1f,0,0), 2),
+                new InstanceData(Matrix4.CreateTranslation(0.15f,0,0), 3),
+                new InstanceData(Matrix4.CreateTranslation(0.2f,0,0), 4),
+            };
+
+            chipCollection.UpdateInstanceDataBuffer();
+
+
             // CARDS
 
             var cardMesh = new Mesh();
             cardMesh.LoadFromObj("models/card/card.obj");
 
             {
-                cardCollection = new CardCollectionObject(new Vector3(0, 0.74f, 0));
-                cardCollection.CardType = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
-                cardCollection.Layer = RenderLayer.Card;
+                cardCollection = new InstanceCollection(new Vector3(0, TableHeight, 0));
+                cardCollection.Layer = RenderLayer.Instanced;
                 cardCollection.Shader = cardShader;
                 cardCollection.Mesh = cardMesh;
                 cardCollection.LoadToBuffer();
             }
 
-            Console.WriteLine("Assets loaded");
+            Debug.WriteLine("Assets loaded");
 
             base.OnLoad();
         }
@@ -206,12 +243,12 @@ namespace PokerParty.Client
             }
             catch (SocketException ex)
             {
-                Console.WriteLine("Cannot connect");
+                Debug.WriteLine("Cannot connect");
             }
 
             if (controlSocket.Connected)
             {
-                Console.WriteLine("Connected.");
+                Debug.WriteLine("Connected.");
 
                 SendLoginRequest();
             }
@@ -237,11 +274,11 @@ namespace PokerParty.Client
                 if (resPacket.Status == OpStatus.Success)
                 {
                     isAutorized = true;
-                    Console.WriteLine($"Nickname \"{Username}\" registered.");
+                    Debug.WriteLine($"Nickname \"{Username}\" registered.");
                 }
                 else if (resPacket.Status == OpStatus.Failure)
                 {
-                    Console.WriteLine($"Nickname register error: {resPacket.GetError()}.");
+                    Debug.WriteLine($"Nickname register error: {resPacket.GetError()}.");
                 }
             }
             else if (resPacket.Code == OpCode.GameStateUpdate)
@@ -262,12 +299,12 @@ namespace PokerParty.Client
 
             // Update cards on the table
 
-            CardInstanceData[] c = new CardInstanceData[gameState.cardsOnTheTable.Length];
+            InstanceData[] c = new InstanceData[gameState.cardsOnTheTable.Length];
 
             for (int i = 0; i < c.Length; i++)
             {
                 var card = gameState.cardsOnTheTable[i];
-                c[i] = new CardInstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f, 0, 0)), card.index);
+                c[i] = new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f, 0, 0)), card.index);
             }
 
             cardCollection.Instances = c;
@@ -346,13 +383,13 @@ namespace PokerParty.Client
 
                 if (WireframeEnabled)
                 {
-                    Console.WriteLine("Wireframe view ENABLED");
+                    Debug.WriteLine("Wireframe view ENABLED");
                     GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                     GL.Disable(EnableCap.CullFace);
                 }
                 else
                 {
-                    Console.WriteLine("Wireframe view DISABLED");
+                    Debug.WriteLine("Wireframe view DISABLED");
                     GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
                     GL.Enable(EnableCap.CullFace);
                 }
@@ -388,13 +425,25 @@ namespace PokerParty.Client
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+            // CARDS
+
             cardCollection.Shader.Use();
             cardCollection.Shader.SetMatrix4("view", Camera.View);
             cardCollection.Shader.SetMatrix4("projection", Camera.Projection);
             cardCollection.Shader.SetMatrix4("model", cardCollection.ModelMatrix);
 
-            GL.BindTexture(TextureTarget.Texture2DArray, CardDeckLoader.Texture.Handle);
+            CardDeckLoader.Texture.Use();
             cardCollection.Draw();
+
+            // CHIPS
+
+            chipCollection.Shader.Use();
+            chipCollection.Shader.SetMatrix4("view", Camera.View);
+            chipCollection.Shader.SetMatrix4("projection", Camera.Projection);
+            chipCollection.Shader.SetMatrix4("model", chipCollection.ModelMatrix);
+
+            chipTexture.Use();
+            chipCollection.Draw();
 
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
