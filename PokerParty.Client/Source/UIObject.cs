@@ -57,12 +57,12 @@ namespace PokerParty.Client
                 throw new Exception("Mesh cannot be null.");
             }
 
-            if (Shader == null)
+            if (Material == null)
             {
-                throw new Exception("Shader cannot be null.");
+                throw new Exception("Material cannot be null.");
             }
 
-            Shader.Use();
+            Material.Use();
 
             // VAO
             VAO = GL.GenVertexArray();
@@ -76,11 +76,11 @@ namespace PokerParty.Client
             Debug.WriteLine($"Load model: {Mesh.Vertices.Length * sizeof(float):n0} B");
 
             // Attributes
-            int vertexLocation = Shader.GetAttribLocation("aPos");
+            int vertexLocation = Material.Shader.GetAttribLocation("aPos");
             GL.EnableVertexAttribArray(vertexLocation);
             GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
 
-            int texCoordLocation = Shader.GetAttribLocation("aTexCoord");
+            int texCoordLocation = Material.Shader.GetAttribLocation("aTexCoord");
             GL.EnableVertexAttribArray(texCoordLocation);
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
         }

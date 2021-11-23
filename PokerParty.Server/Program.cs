@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using static PokerParty.Common.Chips;
 using static PokerParty.Common.ControlPacket;
 using static PokerParty.Common.PlayingCard;
 
@@ -48,24 +49,12 @@ namespace PokerParty.Server
 
                 if (cmdArgs.Length > 0)
                 {
-                    if (cmdArgs[0] == "stop")
+                    if (cmdArgs[0] == "stop" || cmdArgs[0] == "")
                     {
                         return;
                     }
                     else if (cmdArgs[0] == "s")
                     {
-                        gameState = new GameState();
-                        gameState.isActive = true;
-                        gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
-
-                        gameState.cardsOnTheTable = new PlayingCard[]
-                        {
-                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                            PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                            PlayingCard.GetByIndex((byte)rand.Next(0, 51))
-                        };
                         BroadcastGameState();
                     }
                     else
@@ -140,11 +129,13 @@ namespace PokerParty.Server
 
                     if (username.Length < 3 || username.Length > 32)
                     {
+                        // Nickname length invalid
                         var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameIsInvalid);
                         NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                     }
                     else if (clients.Values.Where(x => x.PlayerData != null && x.PlayerData.Nickname == username).Count() > 0)
                     {
+                        // Nickname taken
                         var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameTaken);
                         NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                     }
@@ -152,13 +143,19 @@ namespace PokerParty.Server
                     {
                         if (clients.TryGetValue(clientSocket, out var data))
                         {
+                            // Successfully registered
                             data.Authorized = true;
                             data.PlayerData = new PlayerData(username);
+
+                            GenGameState();
+
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
                             NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
+                            SendGameState(clientSocket);
                         }
                         else
                         {
+                            // Unknown error
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.Unknown);
                             NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
                         }
@@ -167,6 +164,30 @@ namespace PokerParty.Server
             }
 
             clientSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, clientSocket);
+        }
+
+        [Obsolete()]
+        private static void GenGameState()
+        {
+            gameState = new GameState();
+            gameState.isActive = true;
+            gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
+
+            gameState.cardsOnTheTable = new PlayingCard[]
+            {
+                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                PlayingCard.GetByIndex((byte)rand.Next(0, 51))
+            };
+
+            gameState.players[0].Chips = new Chips();
+            gameState.players[0].Chips[ChipColor.Black] = 5;
+            gameState.players[0].Chips[ChipColor.Red] = 10;
+            gameState.players[0].Chips[ChipColor.Green] = 6;
+            gameState.players[0].Chips[ChipColor.Blue] = 4;
+            gameState.players[0].Chips[ChipColor.White] = 2;
         }
 
         private static void DisconnectClient(Socket clientSocket)
@@ -213,6 +234,19 @@ namespace PokerParty.Server
                     NonBlockingSend(c.Key, packet);
                 }
             }
+        }
+
+        private static void SendGameState(Socket clientSocket)
+        {
+            var payload = BinarySerializer.Serialize(gameState);
+
+            Console.WriteLine("GAME STATE: " + BitConverter.ToString(payload));
+
+            var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
+
+            Console.WriteLine("PACKET: " + BitConverter.ToString(packet));
+
+            NonBlockingSend(clientSocket, packet);
         }
 
         private static void NonBlockingSend(Socket socket, byte[] data)

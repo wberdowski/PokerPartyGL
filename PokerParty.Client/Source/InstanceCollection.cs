@@ -1,6 +1,5 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using PokerParty.Common;
 using System;
 using System.Runtime.InteropServices;
 
@@ -18,7 +17,7 @@ namespace PokerParty.Client
 
         public void UpdateInstanceDataBuffer()
         {
-            if(InstanceVBO != null)
+            if (InstanceVBO != null)
             {
                 GL.DeleteBuffer((int)InstanceVBO);
             }
@@ -31,7 +30,7 @@ namespace PokerParty.Client
             GL.BindBuffer(BufferTarget.ArrayBuffer, (int)InstanceVBO);
             GL.BufferData(BufferTarget.ArrayBuffer, Instances.Length * structSize, Instances, BufferUsageHint.StaticDraw);
 
-            var aMatLoc = Shader.GetAttribLocation("aMat");
+            var aMatLoc = Material.Shader.GetAttribLocation("aMat");
 
             for (int i = 0; i < 4; i++)
             {
@@ -40,7 +39,7 @@ namespace PokerParty.Client
                 GL.VertexAttribDivisor(aMatLoc + i, 1);
             }
 
-            var texIdLoc = Shader.GetAttribLocation("aTexId");
+            var texIdLoc = Material.Shader.GetAttribLocation("aTexId");
             GL.EnableVertexAttribArray(texIdLoc);
             GL.VertexAttribPointer(texIdLoc, 1, VertexAttribPointerType.Float, false, structSize, 16 * sizeof(float));
             GL.VertexAttribDivisor(texIdLoc, 1);

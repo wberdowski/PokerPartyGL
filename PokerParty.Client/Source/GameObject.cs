@@ -13,7 +13,7 @@ namespace PokerParty.Client
         public Quaternion Rotation { get { return _rotation; } set { _rotation = value; UpdateModelMatrix(); } }
         public Vector3 Scale { get { return _scale; } set { _scale = value; UpdateModelMatrix(); } }
         public Matrix4 ModelMatrix { get; set; } = Matrix4.Identity;
-        public Shader Shader { get; set; }
+        public Material Material { get; set; }
         public int VAO { get; set; }
         public int VBO { get; set; }
 
@@ -60,12 +60,12 @@ namespace PokerParty.Client
                 throw new Exception("Mesh cannot be null.");
             }
 
-            if (Shader == null)
+            if (Material == null)
             {
-                throw new Exception("Shader cannot be null.");
+                throw new Exception("Material cannot be null.");
             }
 
-            Shader.Use();
+            Material.Shader.Use();
 
             // VAO
             VAO = GL.GenVertexArray();
@@ -84,15 +84,15 @@ namespace PokerParty.Client
             //GL.BufferData(BufferTarget.ElementArrayBuffer, Indices.Length * sizeof(uint), Indices, BufferUsageHint.StaticDraw);
 
             // Attributes
-            int vertexLocation = Shader.GetAttribLocation("aPos");
+            int vertexLocation = Material.Shader.GetAttribLocation("aPos");
             GL.EnableVertexAttribArray(vertexLocation);
             GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 0);
 
-            int texCoordLocation = Shader.GetAttribLocation("aTexCoord");
+            int texCoordLocation = Material.Shader.GetAttribLocation("aTexCoord");
             GL.EnableVertexAttribArray(texCoordLocation);
             GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 8 * sizeof(float), 3 * sizeof(float));
 
-            int normalLocation = Shader.GetAttribLocation("aNormal");
+            int normalLocation = Material.Shader.GetAttribLocation("aNormal");
             GL.EnableVertexAttribArray(normalLocation);
             GL.VertexAttribPointer(normalLocation, 3, VertexAttribPointerType.Float, false, 8 * sizeof(float), 5 * sizeof(float));
         }

@@ -2,8 +2,9 @@
 {
     public class PlayerData
     {
-        public string Nickname { get; }
-        public bool Online { get; set; }
+        public string Nickname;
+        public bool Online;
+        public Chips Chips;
 
         public PlayerData()
         {

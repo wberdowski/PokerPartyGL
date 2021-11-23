@@ -22,6 +22,14 @@
             return new PlayingCard((CardColor)(index / 13), (CardValue)(index % 13));
         }
 
+        public static PlayingCard Back
+        {
+            get => new PlayingCard()
+            {
+                index = 52
+            };
+        }
+
         public static byte GetIndexByColorValue(CardColor color, CardValue value)
         {
             return (byte)((byte)color * 13 + (byte)value);
@@ -49,7 +57,7 @@
             Jack,
             Queen,
             King,
-            Ace,
+            Ace
         }
     }
 }

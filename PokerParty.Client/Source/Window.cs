@@ -1,5 +1,4 @@
 ﻿using BitSerializer;
-using System.Windows.Forms;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -16,21 +15,22 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using static PokerParty.Common.Chips;
 using static PokerParty.Common.ControlPacket;
-using static PokerParty.Common.PlayingCard;
 
 namespace PokerParty.Client
 {
     public class Window : GameWindow
     {
         private const float TableHeight = 0.730712f;
+        private const float ChipHeight = 0.004f;
+
+        public static Dictionary<string, Material> Materials = new Dictionary<string, Material>();
+
         public static TimeSpan DeltaTime { get; private set; }
         public static Camera Camera { get; set; }
 
         private Random rand = new Random();
-        private Shader stdShader;
-        private Shader uiShader;
-        private Shader cardShader;
         private float pitch;
         private float yaw = -90;
         Vector2? lastPos = null;
@@ -93,9 +93,10 @@ namespace PokerParty.Client
         {
             Directory.CreateDirectory("world/data");
 
-            stdShader = new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl");
-            uiShader = new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl");
-            cardShader = new Shader("shaders/card/vert.glsl", "shaders/card/frag.glsl");
+
+            Materials.Add("standard", new Material(new Shader("shaders/standard/vert.glsl", "shaders/standard/frag.glsl")));
+            Materials.Add("ui", new Material(new Shader("shaders/ui/vert.glsl", "shaders/ui/frag.glsl")));
+            Materials.Add("card", new Material(new Shader("shaders/card/vert.glsl", "shaders/card/frag.glsl")));
 
             controlSocket = new Socket(SocketType.Stream, ProtocolType.IP);
             controlSocket.ReceiveTimeout = 10000;
@@ -117,11 +118,11 @@ namespace PokerParty.Client
             sw.Stop();
             Debug.WriteLine("Card deck loaded in " + sw.ElapsedMilliseconds + " ms");
 
-            stdShader.Use();
+            Materials["standard"].Use();
 
             {
                 var obj = new GameObject(new Vector3(0, 0, 0));
-                obj.Shader = stdShader;
+                obj.Material = Materials["standard"];
                 obj.Albedo = Texture.FromFile("models/floor/textures/wood.png");
                 obj.Mesh = new Mesh();
                 obj.Mesh.LoadFromObj("models/floor/floor.obj");
@@ -131,7 +132,7 @@ namespace PokerParty.Client
 
             {
                 var obj = new GameObject(new Vector3(0, 0, 0));
-                obj.Shader = stdShader;
+                obj.Material = Materials["standard"];
                 obj.Albedo = Texture.FromFile("models/table/textures/table.png");
                 obj.Mesh = new Mesh();
                 obj.Mesh.LoadFromObj("models/table/table.obj");
@@ -145,7 +146,7 @@ namespace PokerParty.Client
 
             {
                 var obj = new GameObject(new Vector3(0, 0, 0.8f));
-                obj.Shader = stdShader;
+                obj.Material = Materials["standard"];
                 obj.Mesh = chairMesh;
                 obj.Albedo = chairTex;
                 obj.LoadToBuffer();
@@ -155,7 +156,7 @@ namespace PokerParty.Client
             // FONTS
             {
                 var fontObj = new FontObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
-                fontObj.Shader = uiShader;
+                fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomRight;
                 fontObj.Position = new Vector3(-(fontObj.Size.X + 10), fontObj.Size.Y + 10, 0);
@@ -165,17 +166,17 @@ namespace PokerParty.Client
 
             {
                 var fontObj = new FontObject("Fold [F]\nRise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
-                fontObj.Shader = uiShader;
+                fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomLeft;
-                fontObj.Position = new Vector3(10, fontObj.Size.Y + 10, 0);
+                fontObj.Position = new Vector3(20, fontObj.Size.Y + 20, 0);
                 fontObj.LoadToBuffer();
                 uiObjects.Add(fontObj);
             }
 
             {
                 playersListObj = new FontObject("Players (0):", new Font("Segoe UI", 12f, FontStyle.Bold), new SolidBrush(Color.White));
-                playersListObj.Shader = uiShader;
+                playersListObj.Material = Materials["ui"];
                 playersListObj.Layer = RenderLayer.UI;
                 playersListObj.Anchor = UILayoutAnchor.TopLeft;
                 playersListObj.Position = new Vector3(10, -10, 0);
@@ -187,13 +188,50 @@ namespace PokerParty.Client
 
             {
                 var panelObj = new UIObject();
-                panelObj.Mesh = new PanelMesh(new Vector2(200, 32));
+                panelObj.Mesh = new PanelMesh(new Vector2(200, 240));
                 panelObj.Border = 6;
                 panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
-                panelObj.Shader = uiShader;
+                panelObj.Material = Materials["ui"];
                 panelObj.Layer = RenderLayer.UI;
                 panelObj.Anchor = UILayoutAnchor.TopLeft;
                 panelObj.Position = new Vector3(10, -10, -1);
+                panelObj.LoadToBuffer();
+                uiObjects.Add(panelObj);
+            }
+
+            {
+                var panelObj = new UIObject();
+                panelObj.Mesh = new PanelMesh(new Vector2(200, 100));
+                panelObj.Border = 6;
+                panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
+                panelObj.Material = Materials["ui"];
+                panelObj.Layer = RenderLayer.UI;
+                panelObj.Anchor = UILayoutAnchor.BottomLeft;
+                panelObj.Position = new Vector3(10, 110, -1);
+                panelObj.LoadToBuffer();
+                uiObjects.Add(panelObj);
+            }
+
+            // Message
+            {
+                var fontObj = new FontObject($"Message", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
+                fontObj.Material = Materials["ui"];
+                fontObj.Layer = RenderLayer.UI;
+                fontObj.Anchor = UILayoutAnchor.TopRight;
+                fontObj.Position = new Vector3(-306, -14, 0);
+                fontObj.LoadToBuffer();
+                uiObjects.Add(fontObj);
+            }
+
+            {
+                var panelObj = new UIObject();
+                panelObj.Mesh = new PanelMesh(new Vector2(300, 32));
+                panelObj.Border = 6;
+                panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
+                panelObj.Material = Materials["ui"];
+                panelObj.Layer = RenderLayer.UI;
+                panelObj.Anchor = UILayoutAnchor.TopRight;
+                panelObj.Position = new Vector3(-310, -10, -1);
                 panelObj.LoadToBuffer();
                 uiObjects.Add(panelObj);
             }
@@ -218,12 +256,12 @@ namespace PokerParty.Client
 
             // CHIPS
 
-            cardShader.Use();
+            Materials["card"].Use();
 
             var chipMesh = new Mesh();
             chipMesh.LoadFromObj("models/chip/chip.obj");
 
-            chipTexture = new Texture3D(128, 128, 5);
+            chipTexture = new Texture3D(256, 256, 5);
             chipTexture.LoadAndAdd(0, "models/chip/textures/black.png");
             chipTexture.LoadAndAdd(1, "models/chip/textures/red.png");
             chipTexture.LoadAndAdd(2, "models/chip/textures/green.png");
@@ -234,22 +272,10 @@ namespace PokerParty.Client
             {
                 chipCollection = new InstanceCollection(new Vector3(0, TableHeight + 0.002f, 0.4f));
                 chipCollection.Layer = RenderLayer.Instanced;
-                chipCollection.Shader = cardShader;
+                chipCollection.Material = Materials["card"];
                 chipCollection.Mesh = chipMesh;
                 chipCollection.LoadToBuffer();
             }
-
-            chipCollection.Instances = new InstanceData[]
-            {
-                new InstanceData(Matrix4.CreateTranslation(0,   0,0), 0),
-                new InstanceData(Matrix4.CreateTranslation(0.05f,0,0), 1),
-                new InstanceData(Matrix4.CreateTranslation(0.1f,0,0), 2),
-                new InstanceData(Matrix4.CreateTranslation(0.15f,0,0), 3),
-                new InstanceData(Matrix4.CreateTranslation(0.2f,0,0), 4),
-            };
-
-            chipCollection.UpdateInstanceDataBuffer();
-
 
             // CARDS
 
@@ -259,7 +285,7 @@ namespace PokerParty.Client
             {
                 cardCollection = new InstanceCollection(new Vector3(0, TableHeight, 0));
                 cardCollection.Layer = RenderLayer.Instanced;
-                cardCollection.Shader = cardShader;
+                cardCollection.Material = Materials["card"];
                 cardCollection.Mesh = cardMesh;
                 cardCollection.LoadToBuffer();
             }
@@ -299,7 +325,17 @@ namespace PokerParty.Client
 
         private void OnControlReceive(IAsyncResult ar)
         {
-            var len = controlSocket.EndReceive(ar);
+            int len = 0;
+
+            try
+            {
+                controlSocket.EndReceive(ar);
+            }
+            catch (SocketException ex)
+            {
+                Debug.WriteLine("Disconnected from server.");
+                return;
+            }
 
             var resPacket = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
 
@@ -333,16 +369,40 @@ namespace PokerParty.Client
 
             // Update cards on the table
 
-            InstanceData[] c = new InstanceData[gameState.cardsOnTheTable.Length];
+            InstanceData[] cardInstances = new InstanceData[gameState.cardsOnTheTable.Length];
 
-            for (int i = 0; i < c.Length; i++)
+            for (int i = 0; i < cardInstances.Length; i++)
             {
                 var card = gameState.cardsOnTheTable[i];
-                c[i] = new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f, 0, 0)), card.index);
+                cardInstances[i] = new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f, 0, 0)), PlayingCard.Back.index);
             }
 
-            cardCollection.Instances = c;
+            cardCollection.Instances = cardInstances;
             cardCollection.UpdateInstanceDataBuffer();
+
+            // Update chips
+
+            var chips = gameState.players[0].Chips;
+            var chipInstances = new List<InstanceData>();
+
+            for (int j = 0; j < chips.Amounts.Length; j++)
+            {
+                for (int i = 0; i < chips[(ChipColor)j]; i++)
+                {
+                    chipInstances.Add(new InstanceData(
+                        Matrix4.CreateFromAxisAngle(new Vector3(0, 1, 0), rand.NextSingle() * 2 * (float)Math.PI) *
+                        Matrix4.CreateTranslation(
+                            (rand.NextSingle() - 0.5f) / 300f + j * 0.05f,
+                            (ChipHeight / 2f) + i * ChipHeight,
+                            (rand.NextSingle() - 0.5f) / 300f
+                        ),
+                        j
+                    ));
+                }
+            }
+
+            chipCollection.Instances = chipInstances.ToArray();
+            chipCollection.UpdateInstanceDataBuffer();
         }
 
         //
@@ -381,37 +441,38 @@ namespace PokerParty.Client
 
             Camera.UpdateMatrix();
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W))
+            // Movement
+            if (KeyboardState.IsKeyDown(Keys.W))
             {
                 Camera.Position += new Vector3(Camera.Front.X, 0, Camera.Front.Z).Normalized() * speed * (float)e.Time; //Forward 
             }
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S))
+            if (KeyboardState.IsKeyDown(Keys.S))
             {
                 Camera.Position -= new Vector3(Camera.Front.X, 0, Camera.Front.Z).Normalized() * speed * (float)e.Time; //Backwards
             }
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.A))
+            if (KeyboardState.IsKeyDown(Keys.A))
             {
                 Camera.Position -= Vector3.Normalize(Vector3.Cross(Camera.Front, Camera.Up)) * speed * (float)e.Time; //Left
             }
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.D))
+            if (KeyboardState.IsKeyDown(Keys.D))
             {
                 Camera.Position += Vector3.Normalize(Vector3.Cross(Camera.Front, Camera.Up)) * speed * (float)e.Time; //Right
             }
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Space))
+            if (KeyboardState.IsKeyDown(Keys.Space))
             {
                 Camera.Position += Camera.Up * speed * (float)e.Time; //Up 
             }
 
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.LeftControl))
+            if (KeyboardState.IsKeyDown(Keys.LeftControl))
             {
                 Camera.Position -= Camera.Up * speed * (float)e.Time; //Down
             }
 
-            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.G))
+            if (KeyboardState.IsKeyReleased(Keys.G))
             {
                 WireframeEnabled = !WireframeEnabled;
 
@@ -429,7 +490,7 @@ namespace PokerParty.Client
                 }
             }
 
-            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.F11))
+            if (KeyboardState.IsKeyReleased(Keys.F11))
             {
                 if (WindowState != WindowState.Maximized)
                 {
@@ -441,7 +502,7 @@ namespace PokerParty.Client
                 }
             }
 
-            if (KeyboardState.IsKeyReleased(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape))
+            if (KeyboardState.IsKeyReleased(Keys.Escape))
             {
                 Close();
             }
@@ -460,31 +521,29 @@ namespace PokerParty.Client
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // CARDS
-
-            cardCollection.Shader.Use();
-            cardCollection.Shader.SetMatrix4("view", Camera.View);
-            cardCollection.Shader.SetMatrix4("projection", Camera.Projection);
-            cardCollection.Shader.SetMatrix4("model", cardCollection.ModelMatrix);
+            cardCollection.Material.Shader.Use();
+            cardCollection.Material.Shader.SetMatrix4("view", Camera.View);
+            cardCollection.Material.Shader.SetMatrix4("projection", Camera.Projection);
+            cardCollection.Material.Shader.SetMatrix4("model", cardCollection.ModelMatrix);
 
             CardDeckLoader.Texture.Use();
             cardCollection.Draw();
 
             // CHIPS
-
-            chipCollection.Shader.Use();
-            chipCollection.Shader.SetMatrix4("view", Camera.View);
-            chipCollection.Shader.SetMatrix4("projection", Camera.Projection);
-            chipCollection.Shader.SetMatrix4("model", chipCollection.ModelMatrix);
+            chipCollection.Material.Shader.Use();
+            chipCollection.Material.Shader.SetMatrix4("view", Camera.View);
+            chipCollection.Material.Shader.SetMatrix4("projection", Camera.Projection);
+            chipCollection.Material.Shader.SetMatrix4("model", chipCollection.ModelMatrix);
 
             chipTexture.Use();
             chipCollection.Draw();
 
             foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.Standard))
             {
-                obj.Shader.Use();
-                obj.Shader.SetMatrix4("view", Camera.View);
-                obj.Shader.SetMatrix4("projection", Camera.Projection);
-                obj.Shader.SetMatrix4("model", obj.ModelMatrix);
+                obj.Material.Shader.Use();
+                obj.Material.Shader.SetMatrix4("view", Camera.View);
+                obj.Material.Shader.SetMatrix4("projection", Camera.Projection);
+                obj.Material.Shader.SetMatrix4("model", obj.ModelMatrix);
 
                 if (obj.Albedo != null)
                 {
@@ -496,17 +555,17 @@ namespace PokerParty.Client
                 }
                 obj.Draw();
             }
-            // UI
 
+            // UI
             foreach (var obj in uiObjects)
             {
-                obj.Shader.Use();
-                obj.Shader.SetMatrix4("view", Camera.View);
-                obj.Shader.SetMatrix4("projection", Camera.ProjectionUI);
-                obj.Shader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
-                obj.Shader.SetVec3("size", new Vector3(((PanelMesh)obj.Mesh).Size.X, ((PanelMesh)obj.Mesh).Size.Y, 1));
-                obj.Shader.SetVec3("texSize", new Vector3(32, 32, 0));
-                obj.Shader.SetInt("border", obj.Border);
+                obj.Material.Shader.Use();
+                obj.Material.Shader.SetMatrix4("view", Camera.View);
+                obj.Material.Shader.SetMatrix4("projection", Camera.ProjectionUI);
+                obj.Material.Shader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
+                obj.Material.Shader.SetVec3("size", new Vector3(((PanelMesh)obj.Mesh).Size.X, ((PanelMesh)obj.Mesh).Size.Y, 1));
+                obj.Material.Shader.SetVec3("texSize", new Vector3(32, 32, 0));
+                obj.Material.Shader.SetInt("border", obj.Border);
 
                 if (obj.Albedo != null)
                 {

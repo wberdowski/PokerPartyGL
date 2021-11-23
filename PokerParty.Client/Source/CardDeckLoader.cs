@@ -18,7 +18,7 @@ namespace PokerParty.Client
             var values = Enum.GetNames(typeof(PlayingCard.CardValue));
             var valuesV = Enum.GetValues(typeof(PlayingCard.CardValue));
 
-            Texture = new Texture3D(500, 726, 52);
+            Texture = new Texture3D(500, 726, 53);
 
             int idx = 0;
 
@@ -46,6 +46,10 @@ namespace PokerParty.Client
                     }
                 }
             }
+
+            // Add back texture
+            Texture.LoadAndAdd(idx, "models/card/textures/back.png");
+            cards.Add(PlayingCard.Back, idx);
 
             Texture.GenerateMipmaps();
         }
