@@ -14,7 +14,7 @@ namespace PokerParty.Client
     {
         public int Handle { get; set; }
 
-        public static Texture FromFile(string filepath)
+        public static Texture FromFile(string filepath, TextureMinFilter minFilter = TextureMinFilter.NearestMipmapLinear, TextureMagFilter magFilter = TextureMagFilter.Linear)
         {
             Texture tex = new Texture();
             tex.Handle = GL.GenTexture();
@@ -46,8 +46,8 @@ namespace PokerParty.Client
 
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
 
             float maxTextureMaxAnisotropy = GL.GetFloat((GetPName)All.MaxTextureMaxAnisotropy);
             GL.TexParameter(TextureTarget.Texture2D, (TextureParameterName)All.TextureMaxAnisotropy, maxTextureMaxAnisotropy);

@@ -40,6 +40,7 @@ namespace PokerParty.Client
 
         private Vector3 skyColor = new Vector3(0.5f, 0.9f, 1f);
         private List<GameObject> gameObjects = new List<GameObject>();
+        private List<UIObject> uiObjects = new List<UIObject>();
         private InstanceCollection cardCollection;
         private float speed = 1f;
 
@@ -159,7 +160,7 @@ namespace PokerParty.Client
                 fontObj.Anchor = UILayoutAnchor.BottomRight;
                 fontObj.Position = new Vector3(-(fontObj.Size.X + 10), fontObj.Size.Y + 10, 0);
                 fontObj.LoadToBuffer();
-                gameObjects.Add(fontObj);
+                uiObjects.Add(fontObj);
             }
 
             {
@@ -169,7 +170,7 @@ namespace PokerParty.Client
                 fontObj.Anchor = UILayoutAnchor.BottomLeft;
                 fontObj.Position = new Vector3(10, fontObj.Size.Y + 10, 0);
                 fontObj.LoadToBuffer();
-                gameObjects.Add(fontObj);
+                uiObjects.Add(fontObj);
             }
 
             {
@@ -179,8 +180,41 @@ namespace PokerParty.Client
                 playersListObj.Anchor = UILayoutAnchor.TopLeft;
                 playersListObj.Position = new Vector3(10, -10, 0);
                 playersListObj.LoadToBuffer();
-                gameObjects.Add(playersListObj);
+                uiObjects.Add(playersListObj);
             }
+
+            // PANEL
+
+            {
+                var panelObj = new UIObject();
+                panelObj.Mesh = new PanelMesh(new Vector2(200, 32));
+                panelObj.Border = 6;
+                panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
+                panelObj.Shader = uiShader;
+                panelObj.Layer = RenderLayer.UI;
+                panelObj.Anchor = UILayoutAnchor.TopLeft;
+                panelObj.Position = new Vector3(10, -10, -1);
+                panelObj.LoadToBuffer();
+                uiObjects.Add(panelObj);
+            }
+
+            // Sort transparency
+            uiObjects.Sort((a, b) =>
+            {
+                if (a.Position.Z == b.Position.Z)
+                {
+                    return 0;
+                }
+
+                if (a.Position.Z > b.Position.Z)
+                {
+                    return 1;
+                }
+                else
+                {
+                    return -1;
+                }
+            });
 
             // CHIPS
 
@@ -317,7 +351,7 @@ namespace PokerParty.Client
 
         private void UpdateUILayout()
         {
-            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI).Cast<FontObject>())
+            foreach (var obj in uiObjects)
             {
                 obj.UpdateModelMatrix();
             }
@@ -464,12 +498,15 @@ namespace PokerParty.Client
             }
             // UI
 
-            foreach (var obj in gameObjects.Where(x => x.Layer == RenderLayer.UI))
+            foreach (var obj in uiObjects)
             {
                 obj.Shader.Use();
                 obj.Shader.SetMatrix4("view", Camera.View);
                 obj.Shader.SetMatrix4("projection", Camera.ProjectionUI);
                 obj.Shader.SetMatrix4("model", obj.ModelMatrix * Matrix4.CreateTranslation(-Camera.Bounds.Size.X / 2f, Camera.Bounds.Size.Y / 2f, 0));
+                obj.Shader.SetVec3("size", new Vector3(((PanelMesh)obj.Mesh).Size.X, ((PanelMesh)obj.Mesh).Size.Y, 1));
+                obj.Shader.SetVec3("texSize", new Vector3(32, 32, 0));
+                obj.Shader.SetInt("border", obj.Border);
 
                 if (obj.Albedo != null)
                 {
@@ -479,6 +516,7 @@ namespace PokerParty.Client
                 {
                     GL.BindTexture(TextureTarget.Texture2D, 0);
                 }
+
                 obj.Draw();
             }
 

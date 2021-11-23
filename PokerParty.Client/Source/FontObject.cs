@@ -8,12 +8,11 @@ using System.Drawing.Text;
 
 namespace PokerParty.Client
 {
-    public class FontObject : GameObject
+    public class FontObject : UIObject
     {
         public string Text { get; private set; }
         public Vector2i Size { get; private set; }
         public Bitmap Image { get; private set; }
-        public UILayoutAnchor Anchor { get; set; }
         public Font Font { get; }
         public Brush Brush { get; }
 
@@ -69,66 +68,9 @@ namespace PokerParty.Client
                 g.DrawString(Text, font, brush, 0, 0);
             }
 
-            Mesh = new Mesh();
-            Mesh.Vertices = new float[]{
-                0, -Size.Y, -1f, 0, 1,
-                Size.X , -Size.Y, -1f, 1, 1,
-                Size.X , 0, -1f, 1, 0,
-                0 , 0, -1f, 0, 0,
-            };
+            Mesh = new PanelMesh(Size);
 
             Albedo = Texture.FromImage(Image);
-        }
-
-        public override void Draw()
-        {
-            if (Mesh == null)
-            {
-                throw new Exception("Mesh cannot be null.");
-            }
-
-            GL.BindVertexArray(VAO);
-            GL.DrawArrays(PrimitiveType.TriangleFan, 0, Mesh.Vertices.Length / 5);
-        }
-
-        public override void LoadToBuffer()
-        {
-            if (Mesh == null)
-            {
-                throw new Exception("Mesh cannot be null.");
-            }
-
-            if (Shader == null)
-            {
-                throw new Exception("Shader cannot be null.");
-            }
-
-            Shader.Use();
-
-            // VAO
-            VAO = GL.GenVertexArray();
-            GL.BindVertexArray(VAO);
-
-            // VBO
-            VBO = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, Mesh.Vertices.Length * sizeof(float), Mesh.Vertices, BufferUsageHint.StaticDraw);
-
-            Debug.WriteLine($"Load model: {Mesh.Vertices.Length * sizeof(float):n0} B");
-
-            // Attributes
-            int vertexLocation = Shader.GetAttribLocation("aPos");
-            GL.EnableVertexAttribArray(vertexLocation);
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
-
-            int texCoordLocation = Shader.GetAttribLocation("aTexCoord");
-            GL.EnableVertexAttribArray(texCoordLocation);
-            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
-        }
-
-        internal void DeleteBuffer()
-        {
-            GL.DeleteBuffer(VBO);
         }
     }
 }
