@@ -50,7 +50,7 @@ namespace PokerParty.Client
                     Text = "Report is being uploaded to the PokerParty developers. Please do not close this window.",
                     Icon = TaskDialogIcon.ShieldWarningYellowBar
                 },
-                // TODO: Upload
+                // TODO: Upload error report
             };
 
             page.Buttons[0].Enabled = false;

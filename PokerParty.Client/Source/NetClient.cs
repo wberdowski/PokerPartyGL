@@ -13,6 +13,7 @@ namespace PokerParty.Client
     public static class NetClient
     {
         public static GameState gameState;
+        public static bool IsConnected => (controlSocket != null && controlSocket.Connected);
 
         private static Socket controlSocket;
         private static byte[] recvBuff = new byte[16 * 1024];

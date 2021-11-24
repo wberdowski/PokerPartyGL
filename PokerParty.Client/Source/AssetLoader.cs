@@ -62,7 +62,7 @@ namespace PokerParty.Client
             }
 
             {
-                var fontObj = new FontObject("Fold [F]\nRise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
+                var fontObj = new FontObject("Fold [F]\nRaise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
                 fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomLeft;
@@ -76,7 +76,7 @@ namespace PokerParty.Client
                 playersListObj.Material = Materials["ui"];
                 playersListObj.Layer = RenderLayer.UI;
                 playersListObj.Anchor = UILayoutAnchor.TopLeft;
-                playersListObj.Position = new Vector3(10, -10, 0);
+                playersListObj.Position = new Vector3(20, -20, 0);
                 playersListObj.LoadToBuffer();
                 uiObjects.Add(playersListObj);
             }
@@ -111,24 +111,24 @@ namespace PokerParty.Client
 
             // Message
             {
-                var fontObj = new FontObject($"Message", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
+                var fontObj = new FontObject("Ready", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
                 fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.TopRight;
-                fontObj.Position = new Vector3(-306, -14, 0);
+                fontObj.Position = new Vector3(-406, -14, 0);
                 fontObj.LoadToBuffer();
                 uiObjects.Add(fontObj);
             }
 
             {
                 var panelObj = new UIObject();
-                panelObj.Mesh = new PanelMesh(new Vector2(300, 32));
+                panelObj.Mesh = new PanelMesh(new Vector2(400, 32));
                 panelObj.Border = 6;
                 panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
                 panelObj.Material = Materials["ui"];
                 panelObj.Layer = RenderLayer.UI;
                 panelObj.Anchor = UILayoutAnchor.TopRight;
-                panelObj.Position = new Vector3(-310, -10, -1);
+                panelObj.Position = new Vector3(-410, -10, -1);
                 panelObj.LoadToBuffer();
                 uiObjects.Add(panelObj);
             }
@@ -153,9 +153,6 @@ namespace PokerParty.Client
 
             // CHIPS
 
-            var chipMesh = new Mesh();
-            chipMesh.LoadFromObj("models/chip/chip.obj");
-
             var chipTexture = new Texture3D(256, 256, 5);
             chipTexture.LoadAndAdd(0, "models/chip/textures/black.png");
             chipTexture.LoadAndAdd(1, "models/chip/textures/red.png");
@@ -169,21 +166,36 @@ namespace PokerParty.Client
                 chipCollection.Layer = RenderLayer.Instanced;
                 chipCollection.Material = Materials["card"];
                 chipCollection.Albedo3D = chipTexture;
-                chipCollection.Mesh = chipMesh;
+                chipCollection.Mesh = new Mesh();
+                chipCollection.Mesh.LoadFromObj("models/chip/chip.obj");
                 chipCollection.LoadToBuffer();
             }
 
+            // BUTTONS
+            var buttonTexture = new Texture3D(512, 512, 3);
+            buttonTexture.LoadAndAdd(0, "models/button/textures/dealer.png");
+            buttonTexture.LoadAndAdd(1, "models/button/textures/smallblind.png");
+            buttonTexture.LoadAndAdd(2, "models/button/textures/bigblind.png");
+            buttonTexture.GenerateMipmaps();
+
+            {
+                buttonCollection = new InstanceCollection(new Vector3(0, TableHeight + 0.002f, 0));
+                buttonCollection.Layer = RenderLayer.Instanced;
+                buttonCollection.Material = Materials["card"];
+                buttonCollection.Albedo3D = buttonTexture;
+                buttonCollection.Mesh = new Mesh();
+                buttonCollection.Mesh.LoadFromObj("models/button/button.obj");
+                buttonCollection.LoadToBuffer();
+            }
+
             // CARDS
-
-            var cardMesh = new Mesh();
-            cardMesh.LoadFromObj("models/card/card.obj");
-
             {
                 cardCollection = new InstanceCollection(new Vector3(0, TableHeight, 0));
                 cardCollection.Layer = RenderLayer.Instanced;
                 cardCollection.Albedo3D = CardDeckLoader.Texture;
                 cardCollection.Material = Materials["card"];
-                cardCollection.Mesh = cardMesh;
+                cardCollection.Mesh = new Mesh();
+                cardCollection.Mesh.LoadFromObj("models/card/card.obj");
                 cardCollection.LoadToBuffer();
             }
 

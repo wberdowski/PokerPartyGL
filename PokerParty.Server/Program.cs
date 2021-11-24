@@ -145,14 +145,20 @@ namespace PokerParty.Server
                             // Successfully registered
                             data.Authorized = true;
                             data.PlayerData = new PlayerData(username);
+                            data.PlayerData.Chips = new Chips();
+                            data.PlayerData.Chips[ChipColor.Black] = 5;
+                            data.PlayerData.Chips[ChipColor.Red] = 10;
+                            data.PlayerData.Chips[ChipColor.Green] = 6;
+                            data.PlayerData.Chips[ChipColor.Blue] = 4;
+                            data.PlayerData.Chips[ChipColor.White] = 2;
+
+                            data.PlayerData.Cards[0] = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
+                            data.PlayerData.Cards[1] = new PlayingCard(PlayingCard.CardColor.Hearts, PlayingCard.CardValue.Queen);
+                            data.PlayerData.State = PlayerState.Playing;
 
                             GenGameState();
-                            gameState.players.Last().Chips = new Chips();
-                            gameState.players.Last().Chips[ChipColor.Black] = 5;
-                            gameState.players.Last().Chips[ChipColor.Red] = 10;
-                            gameState.players.Last().Chips[ChipColor.Green] = 6;
-                            gameState.players.Last().Chips[ChipColor.Blue] = 4;
-                            gameState.players.Last().Chips[ChipColor.White] = 2;
+
+
 
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
                             NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
@@ -177,6 +183,7 @@ namespace PokerParty.Server
             gameState = new GameState();
             gameState.isActive = true;
             gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
+            gameState.dealerButtonPos = 6;
 
             gameState.cardsOnTheTable = new PlayingCard[]
             {
@@ -217,6 +224,12 @@ namespace PokerParty.Server
 
             clientSocket.Close();
             clientSocket.Dispose();
+
+            // TODO: REMOVE THIS
+            if (clients.Count() == 0)
+            {
+                Environment.Exit(0);
+            }
         }
 
         private static void BroadcastGameState()
