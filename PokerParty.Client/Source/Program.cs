@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -20,7 +19,7 @@ namespace PokerParty.Client
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
 #if DEBUG
-return;
+            return;
 #endif
             var ex = (Exception)e.ExceptionObject;
 

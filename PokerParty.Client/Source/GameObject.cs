@@ -2,6 +2,7 @@
 using OpenTK.Mathematics;
 using System;
 using System.Diagnostics;
+using static PokerParty.Client.Texture;
 
 namespace PokerParty.Client
 {
@@ -18,6 +19,8 @@ namespace PokerParty.Client
         public int VBO { get; set; }
 
         public Texture Albedo { get; set; }
+        public Texture3D Albedo3D { get; set; }
+        public TextureType TextureType { get; set; }
 
         internal Vector3 _position = Vector3.Zero;
         internal Quaternion _rotation = Quaternion.Identity;
@@ -42,6 +45,20 @@ namespace PokerParty.Client
             if (Mesh == null)
             {
                 throw new Exception("Mesh cannot be null.");
+            }
+
+            Material.Shader.Use();
+            Material.Shader.SetMatrix4("view", Window.Camera.View);
+            Material.Shader.SetMatrix4("projection", Window.Camera.Projection);
+            Material.Shader.SetMatrix4("model", ModelMatrix);
+
+            if (TextureType == Texture.TextureType.Texture2D)
+            {
+                Albedo?.Use();
+            }
+            else
+            {
+                Albedo3D?.Use();
             }
 
             GL.BindVertexArray(VAO);

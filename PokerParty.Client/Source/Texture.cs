@@ -14,6 +14,12 @@ namespace PokerParty.Client
     {
         public int Handle { get; set; }
 
+        public enum TextureType
+        {
+            Texture2D,
+            Texture3D
+        }
+
         public static Texture FromFile(string filepath, TextureMinFilter minFilter = TextureMinFilter.NearestMipmapLinear, TextureMagFilter magFilter = TextureMagFilter.Linear)
         {
             Texture tex = new Texture();

@@ -46,6 +46,23 @@ namespace PokerParty.Client
                 throw new Exception("Mesh cannot be null.");
             }
 
+            Material.Shader.Use();
+            Material.Shader.SetMatrix4("view", Window.Camera.View);
+            Material.Shader.SetMatrix4("projection", Window.Camera.ProjectionUI);
+            Material.Shader.SetMatrix4("model", ModelMatrix * Matrix4.CreateTranslation(-Window.Camera.Bounds.Size.X / 2f, Window.Camera.Bounds.Size.Y / 2f, 0));
+            Material.Shader.SetVec3("size", new Vector3(((PanelMesh)Mesh).Size.X, ((PanelMesh)Mesh).Size.Y, 1));
+            Material.Shader.SetVec3("texSize", new Vector3(32, 32, 0));
+            Material.Shader.SetInt("border", Border);
+
+            if (TextureType == Texture.TextureType.Texture2D)
+            {
+                Albedo?.Use();
+            }
+            else
+            {
+                Albedo3D?.Use();
+            }
+
             GL.BindVertexArray(VAO);
             GL.DrawArrays(PrimitiveType.TriangleFan, 0, Mesh.Vertices.Length / 5);
         }

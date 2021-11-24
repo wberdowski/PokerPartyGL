@@ -1,9 +1,6 @@
-﻿using OpenTK.Graphics.OpenGL4;
-using OpenTK.Mathematics;
+﻿using OpenTK.Mathematics;
 using System;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 
 namespace PokerParty.Client

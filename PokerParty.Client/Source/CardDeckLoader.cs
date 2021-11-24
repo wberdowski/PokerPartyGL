@@ -1,5 +1,4 @@
-﻿using OpenTK.Graphics.OpenGL4;
-using PokerParty.Common;
+﻿using PokerParty.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;

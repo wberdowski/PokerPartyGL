@@ -5,6 +5,7 @@
         public string Nickname;
         public bool Online;
         public Chips Chips;
+        public int Seat;
 
         public PlayerData()
         {

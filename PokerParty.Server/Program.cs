@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using static PokerParty.Common.Chips;
 using static PokerParty.Common.ControlPacket;
-using static PokerParty.Common.PlayingCard;
 
 namespace PokerParty.Server
 {
@@ -148,10 +147,16 @@ namespace PokerParty.Server
                             data.PlayerData = new PlayerData(username);
 
                             GenGameState();
+                            gameState.players.Last().Chips = new Chips();
+                            gameState.players.Last().Chips[ChipColor.Black] = 5;
+                            gameState.players.Last().Chips[ChipColor.Red] = 10;
+                            gameState.players.Last().Chips[ChipColor.Green] = 6;
+                            gameState.players.Last().Chips[ChipColor.Blue] = 4;
+                            gameState.players.Last().Chips[ChipColor.White] = 2;
 
                             var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
                             NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
-                            SendGameState(clientSocket);
+                            BroadcastGameState();
                         }
                         else
                         {
@@ -175,19 +180,16 @@ namespace PokerParty.Server
 
             gameState.cardsOnTheTable = new PlayingCard[]
             {
-                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
+                PlayingCard.Back,
+                PlayingCard.Back,
+                PlayingCard.Back,
+                PlayingCard.Back,
                 PlayingCard.GetByIndex((byte)rand.Next(0, 51))
             };
-
-            gameState.players[0].Chips = new Chips();
-            gameState.players[0].Chips[ChipColor.Black] = 5;
-            gameState.players[0].Chips[ChipColor.Red] = 10;
-            gameState.players[0].Chips[ChipColor.Green] = 6;
-            gameState.players[0].Chips[ChipColor.Blue] = 4;
-            gameState.players[0].Chips[ChipColor.White] = 2;
         }
 
         private static void DisconnectClient(Socket clientSocket)
@@ -220,12 +222,7 @@ namespace PokerParty.Server
         private static void BroadcastGameState()
         {
             var payload = BinarySerializer.Serialize(gameState);
-
-            Console.WriteLine("GAME STATE: " + BitConverter.ToString(payload));
-
             var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
-
-            Console.WriteLine("PACKET: " + BitConverter.ToString(packet));
 
             lock (clients)
             {
@@ -239,12 +236,7 @@ namespace PokerParty.Server
         private static void SendGameState(Socket clientSocket)
         {
             var payload = BinarySerializer.Serialize(gameState);
-
-            Console.WriteLine("GAME STATE: " + BitConverter.ToString(payload));
-
             var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
-
-            Console.WriteLine("PACKET: " + BitConverter.ToString(packet));
 
             NonBlockingSend(clientSocket, packet);
         }

@@ -64,7 +64,8 @@ namespace PokerParty.Client
 
                 Use();
                 GL.TexSubImage3D(TextureTarget.Texture2DArray, 0, 0, 0, index, image.Width, image.Height, 1, PixelFormat.Rgba, PixelType.UnsignedByte, pixels.ToArray());
-            } else
+            }
+            else
             {
                 throw new Exception("Tried to exceed object capacity.");
             }

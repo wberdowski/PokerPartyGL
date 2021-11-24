@@ -17,10 +17,7 @@ namespace PokerParty.Client
 
         public void Use()
         {
-            if (Shader != null)
-            {
-                Shader.Use();
-            }
+            Shader?.Use();
         }
     }
 }

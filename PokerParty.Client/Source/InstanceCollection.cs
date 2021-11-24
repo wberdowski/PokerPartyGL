@@ -12,7 +12,7 @@ namespace PokerParty.Client
 
         public InstanceCollection(Vector3 position) : base(position)
         {
-
+            TextureType = Texture.TextureType.Texture3D;
         }
 
         public void UpdateInstanceDataBuffer()
@@ -57,6 +57,20 @@ namespace PokerParty.Client
             if (Instances == null)
             {
                 return;
+            }
+
+            Material.Shader.Use();
+            Material.Shader.SetMatrix4("view", Window.Camera.View);
+            Material.Shader.SetMatrix4("projection", Window.Camera.Projection);
+            Material.Shader.SetMatrix4("model", ModelMatrix);
+
+            if (TextureType == Texture.TextureType.Texture2D)
+            {
+                Albedo?.Use();
+            }
+            else
+            {
+                Albedo3D?.Use();
             }
 
             GL.BindVertexArray(VAO);
