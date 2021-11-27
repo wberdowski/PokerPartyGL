@@ -31,6 +31,7 @@ namespace PokerParty.Client
         public static void Connect()
         {
             controlSocket.BeginConnect(new IPEndPoint(IPAddress.Loopback, 55555), OnConnect, null);
+            SetMessageText("Connecting...");
         }
 
         private static void OnConnect(IAsyncResult ar)
@@ -42,12 +43,13 @@ namespace PokerParty.Client
             catch (SocketException ex)
             {
                 Debug.WriteLine("Cannot connect");
+                SetMessageText("Can't connect to the server.");
             }
 
             if (controlSocket.Connected)
             {
                 Debug.WriteLine("Connected.");
-
+                SetMessageText("Connected.");
                 SendLoginRequest();
             }
         }
@@ -71,6 +73,7 @@ namespace PokerParty.Client
             catch (SocketException ex)
             {
                 Debug.WriteLine("Disconnected from server.");
+                SetMessageText("Server connection lost.");
                 return;
             }
 
@@ -86,12 +89,13 @@ namespace PokerParty.Client
                 else if (resPacket.Status == OpStatus.Failure)
                 {
                     Debug.WriteLine($"Nickname register error: {resPacket.GetError()}.");
+                    SetMessageText("Can't register player nickname.");
                 }
             }
             else if (resPacket.Code == OpCode.GameStateUpdate)
             {
                 gameState = BinarySerializer.Deserialize<GameState>(resPacket.Payload);
-                gameStateUpdatePending = true;
+                UpdateGameState();
             }
 
             controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);

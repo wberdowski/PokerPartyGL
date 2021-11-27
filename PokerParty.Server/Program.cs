@@ -17,7 +17,6 @@ namespace PokerParty.Server
         private static byte[] recvBuff = new byte[16 * 1024];
         private static Dictionary<Socket, ClientData> clients = new Dictionary<Socket, ClientData>();
         private static Random rand = new Random();
-
         private static GameState gameState;
 
         public static void Main(string[] args)
@@ -85,9 +84,7 @@ namespace PokerParty.Server
         {
             var clientSocket = controlSocket.EndAccept(ar);
             clients.Add(clientSocket, new ClientData());
-
             Console.WriteLine($"Client connected: {(IPEndPoint)clientSocket.RemoteEndPoint}");
-
             clientSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, clientSocket);
 
             controlSocket.BeginAccept(OnControlAccept, null);
@@ -181,7 +178,7 @@ namespace PokerParty.Server
         private static void GenGameState()
         {
             gameState = new GameState();
-            gameState.isActive = true;
+            gameState.active = true;
             gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
             gameState.dealerButtonPos = 6;
 
@@ -246,6 +243,7 @@ namespace PokerParty.Server
             }
         }
 
+        [Obsolete]
         private static void SendGameState(Socket clientSocket)
         {
             var payload = BinarySerializer.Serialize(gameState);

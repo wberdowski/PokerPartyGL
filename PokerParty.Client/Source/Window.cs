@@ -21,8 +21,11 @@ namespace PokerParty.Client
         public static Dictionary<string, Material> Materials = new Dictionary<string, Material>();
         public static TimeSpan DeltaTime { get; private set; }
         public static Camera Camera { get; set; }
-        public static volatile bool gameStateUpdatePending;
+        public static Queue<Action> runOnMainThreadQueue = new Queue<Action>();
+
         public static FontObject playersListObj;
+        public static FontObject messageObj;
+
         public static InstanceCollection chipCollection;
         public static List<GameObject> gameObjects = new List<GameObject>();
         public static List<UIObject> uiObjects = new List<UIObject>();
@@ -38,7 +41,7 @@ namespace PokerParty.Client
         private float sensitivity = 0.1f;
         private Vector3 skyColor = new Vector3(0.5f, 0.9f, 1f);
         private float speed = 1f;
-        private Matrix4[] seats = new Matrix4[]
+        public static Matrix4[] seats = new Matrix4[]
         {
             // Bottom row  
             Matrix4.CreateTranslation(-0.6f,0,0.4f),
@@ -122,84 +125,110 @@ namespace PokerParty.Client
             base.OnLoad();
         }
 
-        private void UpdateGameState()
+        public static void SetMessageText(string text)
         {
-            // Update player list
-            playersListObj.Generate($"Players ({gameState.players.Length}):\n{string.Join('\n', gameState.players.Select(x => $"{x.Nickname} [{(x.Online ? "Online" : "Offline")}]"))}");
-            playersListObj.DeleteBuffer();
-            playersListObj.LoadToBuffer();
-
-            // Update cards on the table
-            var cardInstances = new List<InstanceData>();
-
-            for (int i = 0; i < gameState.cardsOnTheTable.Length; i++)
+            RunOnMainThread(() =>
             {
-                var card = gameState.cardsOnTheTable[i];
-                cardInstances.Add(new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f - 0.2f, 0, 0)), card.index));
-            }
-
-            var chipInstances = new List<InstanceData>();
-            var rand = new Random();
-
-            for (int p = 0; p < 10; p++)
-            {
-                var player = gameState.players[0];
-                // Update player cards
-                var cards = player.Cards;
-
-                if (player.State == PlayerState.Shown || player.State == PlayerState.Folded)
-                {
-                    for (int i = 0; i < cards.Length; i++)
-                    {
-                        cardInstances.Add(new InstanceData(
-                            Matrix4.CreateTranslation(new Vector3(i * 0.1f - 0.05f, 0, -0.2f))
-                            * seats[p]
-                            , (player.State != PlayerState.Folded ? cards[i].index : PlayingCard.Back.index)));
-                    }
-                }
-
-                // Update player chips
-                var chips = gameState.players[0].Chips;
-
-                for (int j = 0; j < chips.Amounts.Length; j++)
-                {
-                    for (int i = 0; i < chips[(ChipColor)j]; i++)
-                    {
-                        chipInstances.Add(new InstanceData(
-                            Matrix4.CreateFromAxisAngle(new Vector3(0, 1, 0), rand.NextSingle() * 2 * (float)Math.PI) *
-                            Matrix4.CreateTranslation(
-                                (rand.NextSingle() - 0.5f) / 300f + j * 0.05f - 0.1f,
-                                (ChipHeight / 2f) + i * ChipHeight,
-                                (rand.NextSingle() - 0.5f) / 300f
-                            ) * seats[p], // TODO: real seat
-                            j
-                        ));
-                    }
-                }
-            }
-
-            var buttonInstances = new List<InstanceData>();
-
-            // Update buttons
-            for (int i = 0; i < 3; i++)
-            {
-                buttonInstances.Add(new InstanceData(
-                    Matrix4.CreateTranslation((rand.NextSingle() - 0.5f) * 2 * 0.1f, 0, -0.07f + rand.NextSingle() * (-0.12f + 0.07f))
-                    * seats[mod(gameState.dealerButtonPos - i, gameState.players.Length)]
-                    , i));
-            }
-
-            buttonCollection.Instances = buttonInstances.ToArray();
-            buttonCollection.UpdateInstanceDataBuffer();
-
-            cardCollection.Instances = cardInstances.ToArray();
-            cardCollection.UpdateInstanceDataBuffer();
-
-            chipCollection.Instances = chipInstances.ToArray();
-            chipCollection.UpdateInstanceDataBuffer();
+                messageObj.Generate(text);
+                messageObj.DeleteBuffer();
+                messageObj.LoadToBuffer();
+            });
         }
 
-        int mod(int x, int m)
+        public static void RunOnMainThread(Action action)
+        {
+            lock (runOnMainThreadQueue)
+            {
+                runOnMainThreadQueue.Enqueue(action);
+            }
+        }
+
+        public static void UpdateGameState()
+        {
+            if (!gameState.active)
+            {
+                return;
+            }
+
+            RunOnMainThread(() =>
+            {
+                // Update player list
+                playersListObj.Generate($"Players ({gameState.players.Length}):\n{string.Join('\n', gameState.players.Select(x => $"{x.Nickname} [{(x.Online ? "Online" : "Offline")}]"))}");
+                playersListObj.DeleteBuffer();
+                playersListObj.LoadToBuffer();
+
+                // Update cards on the table
+                var cardInstances = new List<InstanceData>();
+
+                for (int i = 0; i < gameState.cardsOnTheTable.Length; i++)
+                {
+                    var card = gameState.cardsOnTheTable[i];
+                    cardInstances.Add(new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f - 0.2f, 0, 0)), card.index));
+                }
+
+                var chipInstances = new List<InstanceData>();
+                var rand = new Random();
+
+                for (int p = 0; p < 10; p++)
+                {
+                    var player = gameState.players[0];
+                    // Update player cards
+                    var cards = player.Cards;
+
+                    if (player.State == PlayerState.Shown || player.State == PlayerState.Folded)
+                    {
+                        for (int i = 0; i < cards.Length; i++)
+                        {
+                            cardInstances.Add(new InstanceData(
+                                Matrix4.CreateTranslation(new Vector3(i * 0.1f - 0.05f, 0, -0.2f))
+                                * seats[p]
+                                , (player.State != PlayerState.Folded ? cards[i].index : PlayingCard.Back.index)));
+                        }
+                    }
+
+                    // Update player chips
+                    var chips = gameState.players[0].Chips;
+
+                    for (int j = 0; j < chips.Amounts.Length; j++)
+                    {
+                        for (int i = 0; i < chips[(ChipColor)j]; i++)
+                        {
+                            chipInstances.Add(new InstanceData(
+                                Matrix4.CreateFromAxisAngle(new Vector3(0, 1, 0), rand.NextSingle() * 2 * (float)Math.PI) *
+                                Matrix4.CreateTranslation(
+                                    (rand.NextSingle() - 0.5f) / 300f + j * 0.05f - 0.1f,
+                                    (ChipHeight / 2f) + i * ChipHeight,
+                                    (rand.NextSingle() - 0.5f) / 300f
+                                ) * seats[p],
+                                j
+                            ));
+                        }
+                    }
+                }
+
+                var buttonInstances = new List<InstanceData>();
+
+                // Update buttons
+                for (int i = 0; i < 3; i++)
+                {
+                    buttonInstances.Add(new InstanceData(
+                        Matrix4.CreateTranslation((rand.NextSingle() - 0.5f) * 2 * 0.1f, 0, -0.07f + rand.NextSingle() * (-0.12f + 0.07f))
+                        * seats[mod(gameState.dealerButtonPos - i, gameState.players.Length)]
+                        , i));
+                }
+
+                buttonCollection.Instances = buttonInstances.ToArray();
+                buttonCollection.UpdateInstanceDataBuffer();
+
+                cardCollection.Instances = cardInstances.ToArray();
+                cardCollection.UpdateInstanceDataBuffer();
+
+                chipCollection.Instances = chipInstances.ToArray();
+                chipCollection.UpdateInstanceDataBuffer();
+            });
+        }
+
+        private static int mod(int x, int m)
         {
             int r = x % m;
             return r < 0 ? r + m : r;
@@ -219,10 +248,12 @@ namespace PokerParty.Client
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
-            if (gameStateUpdatePending)
+            lock (runOnMainThreadQueue)
             {
-                gameStateUpdatePending = false;
-                UpdateGameState();
+                while (runOnMainThreadQueue.TryDequeue(out var action))
+                {
+                    action.Invoke();
+                }
             }
 
             if (pitch > 89.0f)

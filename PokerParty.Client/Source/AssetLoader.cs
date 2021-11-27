@@ -1,5 +1,6 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
@@ -50,7 +51,7 @@ namespace PokerParty.Client
                 gameObjects.Add(obj);
             }
 
-            // FONTS
+            // TEXT
             {
                 var fontObj = new FontObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
                 fontObj.Material = Materials["ui"];
@@ -81,8 +82,21 @@ namespace PokerParty.Client
                 uiObjects.Add(playersListObj);
             }
 
-            // PANEL
+            // PLAYER NAMES
+            foreach (var s in seats)
+            {
+                var fontObj = new GameObject(new Vector3(0, TableHeight + 0.002f, -0.1f), Quaternion.FromEulerAngles(-(float)Math.PI / 2, 0, (float)Math.PI));
+                fontObj.InstanceMatrix = s;
+                fontObj.Scale = new Vector3(0.001f);
+                fontObj.Material = Materials["standard"];
+                fontObj.Albedo = FontObject.GenerateTexture("IceWallOwCome", new Font("Segoe UI", 18f, FontStyle.Bold), new SolidBrush(Color.White), out var size);
+                fontObj.Mesh = new PanelMesh3D(new Vector2(size.X, size.Y));
+                fontObj.Position = new Vector3(fontObj.Position.X + size.X * fontObj.Scale.X / 2f, fontObj.Position.Y, fontObj.Position.Z);
+                fontObj.LoadToBuffer();
+                gameObjects.Add(fontObj);
+            }
 
+            // PANEL
             {
                 var panelObj = new UIObject();
                 panelObj.Mesh = new PanelMesh(new Vector2(200, 240));
@@ -111,13 +125,13 @@ namespace PokerParty.Client
 
             // Message
             {
-                var fontObj = new FontObject("Ready", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
-                fontObj.Material = Materials["ui"];
-                fontObj.Layer = RenderLayer.UI;
-                fontObj.Anchor = UILayoutAnchor.TopRight;
-                fontObj.Position = new Vector3(-406, -14, 0);
-                fontObj.LoadToBuffer();
-                uiObjects.Add(fontObj);
+                messageObj = new FontObject("Ready", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
+                messageObj.Material = Materials["ui"];
+                messageObj.Layer = RenderLayer.UI;
+                messageObj.Anchor = UILayoutAnchor.TopRight;
+                messageObj.Position = new Vector3(-406, -14, 0);
+                messageObj.LoadToBuffer();
+                uiObjects.Add(messageObj);
             }
 
             {

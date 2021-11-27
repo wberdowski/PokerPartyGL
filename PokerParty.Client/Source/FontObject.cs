@@ -69,5 +69,20 @@ namespace PokerParty.Client
 
             Albedo = Texture.FromImage(Image);
         }
+
+        public static Texture GenerateTexture(string text, Font font, Brush brush, out Vector2i size)
+        {
+            SizeF sizef = Graphics.FromHwnd(IntPtr.Zero).MeasureString(text, font);
+            size = new Vector2i((int)Math.Ceiling(sizef.Width), (int)Math.Ceiling(sizef.Height));
+
+            var Image = new Bitmap(size.X, size.Y);
+            using (var g = Graphics.FromImage(Image))
+            {
+                g.TextRenderingHint = TextRenderingHint.AntiAlias;
+                g.DrawString(text, font, brush, 0, 0);
+            }
+
+            return Texture.FromImage(Image);
+        }
     }
 }

@@ -13,7 +13,8 @@ namespace PokerParty.Client
         public Vector3 Position { get { return _position; } set { _position = value; UpdateModelMatrix(); } }
         public Quaternion Rotation { get { return _rotation; } set { _rotation = value; UpdateModelMatrix(); } }
         public Vector3 Scale { get { return _scale; } set { _scale = value; UpdateModelMatrix(); } }
-        public Matrix4 ModelMatrix { get; set; } = Matrix4.Identity;
+        public Matrix4 ModelMatrix { get; protected set; } = Matrix4.Identity;
+        public Matrix4 InstanceMatrix { get; set; } = Matrix4.Identity;
         public Material Material { get; set; }
         public int VAO { get; set; }
         public int VBO { get; set; }
@@ -67,7 +68,7 @@ namespace PokerParty.Client
 
         public virtual void UpdateModelMatrix()
         {
-            ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position);
+            ModelMatrix = Matrix4.CreateScale(_scale) * Matrix4.CreateFromQuaternion(_rotation) * Matrix4.CreateTranslation(_position) * InstanceMatrix;
         }
 
         public virtual void LoadToBuffer()

@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -10,7 +11,7 @@ using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 
 namespace PokerParty.Client
 {
-    public class Texture
+    public class Texture : IDisposable
     {
         public int Handle { get; set; }
 
@@ -94,6 +95,11 @@ namespace PokerParty.Client
         public void Use()
         {
             GL.BindTexture(TextureTarget.Texture2D, Handle);
+        }
+
+        public void Dispose()
+        {
+            GL.DeleteTexture(Handle);
         }
     }
 }
