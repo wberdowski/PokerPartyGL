@@ -3,8 +3,10 @@
     public enum UILayoutAnchor
     {
         TopLeft,
+        TopCenter,
         TopRight,
         BottomLeft,
+        BottomCenter,
         BottomRight
     }
 }

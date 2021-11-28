@@ -18,6 +18,7 @@ namespace PokerParty.Client
         public Material Material { get; set; }
         public int VAO { get; set; }
         public int VBO { get; set; }
+        public string Tag { get; set; }
 
         public Texture Albedo { get; set; }
         public Texture3D Albedo3D { get; set; }

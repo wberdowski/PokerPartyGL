@@ -12,12 +12,12 @@ namespace PokerParty.Server
 {
     public class Program
     {
-        private static Socket controlSocket;
-        private static IPEndPoint controlEp;
-        private static byte[] recvBuff = new byte[16 * 1024];
-        private static Dictionary<Socket, ClientData> clients = new Dictionary<Socket, ClientData>();
-        private static Random rand = new Random();
-        private static GameState gameState;
+        internal static Socket controlSocket;
+        internal static IPEndPoint controlEp;
+        internal static byte[] recvBuff = new byte[16 * 1024];
+        internal static Dictionary<Socket, ClientData> clients = new Dictionary<Socket, ClientData>();
+        internal static Random rand = new Random();
+        internal static GameState gameState;
 
         public static void Main(string[] args)
         {
@@ -37,6 +37,8 @@ namespace PokerParty.Server
             controlSocket.Bind(controlEp);
             controlSocket.Listen(5);
             controlSocket.BeginAccept(OnControlAccept, null);
+
+            Commands.RegisterAll();
 
             Console.WriteLine("Server started.\nType \"stop\" to save and stop the server.");
 
@@ -119,54 +121,11 @@ namespace PokerParty.Server
                 var packet = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
                 Console.WriteLine(packet);
 
-                if (packet.Code == OpCode.LoginRequest)
+                foreach(var cmd in Commands.Registered)
                 {
-                    var username = Encoding.UTF8.GetString(packet.Payload);
-
-                    if (username.Length < 3 || username.Length > 32)
+                    if(cmd.Key == packet.Code)
                     {
-                        // Nickname length invalid
-                        var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameIsInvalid);
-                        NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
-                    }
-                    else if (clients.Values.Where(x => x.PlayerData != null && x.PlayerData.Nickname == username).Count() > 0)
-                    {
-                        // Nickname taken
-                        var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameTaken);
-                        NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
-                    }
-                    else
-                    {
-                        if (clients.TryGetValue(clientSocket, out var data))
-                        {
-                            // Successfully registered
-                            data.Authorized = true;
-                            data.PlayerData = new PlayerData(username);
-                            data.PlayerData.Chips = new Chips();
-                            data.PlayerData.Chips[ChipColor.Black] = 5;
-                            data.PlayerData.Chips[ChipColor.Red] = 10;
-                            data.PlayerData.Chips[ChipColor.Green] = 6;
-                            data.PlayerData.Chips[ChipColor.Blue] = 4;
-                            data.PlayerData.Chips[ChipColor.White] = 2;
-
-                            data.PlayerData.Cards[0] = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
-                            data.PlayerData.Cards[1] = new PlayingCard(PlayingCard.CardColor.Hearts, PlayingCard.CardValue.Queen);
-                            data.PlayerData.State = PlayerState.Playing;
-
-                            GenGameState();
-
-
-
-                            var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
-                            NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
-                            BroadcastGameState();
-                        }
-                        else
-                        {
-                            // Unknown error
-                            var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.Unknown);
-                            NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
-                        }
+                        cmd.Value.Invoke(clientSocket, packet);
                     }
                 }
             }
@@ -174,16 +133,59 @@ namespace PokerParty.Server
             clientSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, clientSocket);
         }
 
+        internal static void GenChips(PlayerData data)
+        {
+            data.Chips = new Chips();
+            int left = data.Balance;
+
+            while (left > 0)
+            {
+                if (left > 500)
+                {
+                    data.Chips[ChipColor.White]++;
+                    left -= 500;
+                }
+
+                if (left > 100)
+                {
+                    data.Chips[ChipColor.Blue]++;
+                    left -= 100;
+                }
+
+                if (left > 50)
+                {
+                    data.Chips[ChipColor.Green]++;
+                    left -= 50;
+                }
+
+                if (left > 20)
+                {
+                    data.Chips[ChipColor.Red]++;
+                    left -= 20;
+                }
+
+                if (left >= 10)
+                {
+                    data.Chips[ChipColor.Black]++;
+                    left -= 10;
+                }
+            }
+        }
+
         [Obsolete()]
-        private static void GenGameState()
+        internal static void GenGameState()
         {
             gameState = new GameState();
-            gameState.active = true;
             gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
-            gameState.dealerButtonPos = 6;
+            gameState.cardsOnTheTable = new PlayingCard[0];
 
-            gameState.cardsOnTheTable = new PlayingCard[]
+            if (clients.Values.Where(x => x.Authorized).Count() >= 2)
             {
+                gameState.active = true;
+                gameState.dealerButtonPos = 0;
+
+                gameState.cardsOnTheTable = new PlayingCard[]
+                {
                 //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
                 //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
                 //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
@@ -193,10 +195,11 @@ namespace PokerParty.Server
                 PlayingCard.Back,
                 PlayingCard.Back,
                 PlayingCard.GetByIndex((byte)rand.Next(0, 51))
-            };
+                };
+            }
         }
 
-        private static void DisconnectClient(Socket clientSocket)
+        internal static void DisconnectClient(Socket clientSocket)
         {
             Console.WriteLine($"Client disconnected: {(IPEndPoint)clientSocket.RemoteEndPoint}");
 
@@ -229,16 +232,19 @@ namespace PokerParty.Server
             }
         }
 
-        private static void BroadcastGameState()
+        internal static void BroadcastGameState()
         {
-            var payload = BinarySerializer.Serialize(gameState);
-            var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
-
-            lock (clients)
+            if (gameState != null)
             {
-                foreach (var c in clients)
+                var payload = BinarySerializer.Serialize(gameState);
+                var packet = BinarySerializer.Serialize(new ControlPacket(OpCode.GameStateUpdate, payload));
+
+                lock (clients)
                 {
-                    NonBlockingSend(c.Key, packet);
+                    foreach (var c in clients)
+                    {
+                        NonBlockingSend(c.Key, packet);
+                    }
                 }
             }
         }
@@ -252,12 +258,12 @@ namespace PokerParty.Server
             NonBlockingSend(clientSocket, packet);
         }
 
-        private static void NonBlockingSend(Socket socket, byte[] data)
+        internal static void NonBlockingSend(Socket socket, byte[] data)
         {
             socket.BeginSend(data, 0, data.Length, SocketFlags.None, OnSend, socket);
         }
 
-        private static void OnSend(IAsyncResult ar)
+        internal static void OnSend(IAsyncResult ar)
         {
             var clientSocket = (Socket)ar.AsyncState;
 

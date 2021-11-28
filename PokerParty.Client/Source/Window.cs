@@ -7,6 +7,7 @@ using PokerParty.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using static PokerParty.Client.NetClient;
@@ -23,16 +24,18 @@ namespace PokerParty.Client
         public static Camera Camera { get; set; }
         public static Queue<Action> runOnMainThreadQueue = new Queue<Action>();
 
-        public static FontObject playersListObj;
-        public static FontObject messageObj;
+        public static TextObject playersListObj;
+        public static TextObject titleObj;
+        public static TextObject messageObj;
 
         public static InstanceCollection chipCollection;
         public static List<GameObject> gameObjects = new List<GameObject>();
         public static List<UIObject> uiObjects = new List<UIObject>();
+        public static List<GameObject> seatLabels = new List<GameObject>();
         public static InstanceCollection cardCollection;
         public static InstanceCollection buttonCollection;
 
-        public static string Username { get; set; }
+        public static string Nickname { get; set; }
 
         private bool wireframeEnabled;
         private float pitch = 0;
@@ -114,8 +117,8 @@ namespace PokerParty.Client
                 80f
             );
 
-            Username = "User" + new Random().Next(1111, 9999);
-            Title += " - " + Username;
+            Nickname = "User" + new Random().Next(1111, 9999);
+            Title += " - " + Nickname;
 
             AssetLoader.Load();
 
@@ -132,6 +135,16 @@ namespace PokerParty.Client
                 messageObj.Generate(text);
                 messageObj.DeleteBuffer();
                 messageObj.LoadToBuffer();
+            });
+        }
+
+        public static void SetTitleText(string text)
+        {
+            RunOnMainThread(() =>
+            {
+                titleObj.Generate(text);
+                titleObj.DeleteBuffer();
+                titleObj.LoadToBuffer();
             });
         }
 
@@ -157,6 +170,8 @@ namespace PokerParty.Client
                 playersListObj.DeleteBuffer();
                 playersListObj.LoadToBuffer();
 
+                SetMessageText($"POT: {gameState.pot}");
+
                 // Update cards on the table
                 var cardInstances = new List<InstanceData>();
 
@@ -167,11 +182,26 @@ namespace PokerParty.Client
                 }
 
                 var chipInstances = new List<InstanceData>();
-                var rand = new Random();
+                var rand = new Random(1);
 
-                for (int p = 0; p < 10; p++)
+                for (int p = 0; p < gameState.players.Length; p++)
                 {
-                    var player = gameState.players[0];
+                    var player = gameState.players[p];
+
+                    if (p == gameState.turn)
+                    {
+                        if (player.Nickname != Nickname)
+                        {
+                            SetTitleText(player.Nickname + " turn");
+                        } else
+                        {
+                            SetTitleText("Your turn!");
+                        }
+                    }
+
+                    // TODO: Dont update on every gamestate change
+                    UpdateLabelText(seatLabels[p], player.Nickname);
+
                     // Update player cards
                     var cards = player.Cards;
 
@@ -244,6 +274,16 @@ namespace PokerParty.Client
             {
                 obj.UpdateModelMatrix();
             }
+        }
+
+        private static void UpdateLabelText(GameObject obj, string text)
+        {
+            obj.Albedo.Dispose();
+            obj.Dispose();
+            obj.Albedo = TextObject.GenerateTexture(text, new Font("Segoe UI", 100f, FontStyle.Bold), new SolidBrush(Color.Black), out var size);
+            obj.Mesh = new PanelMesh3D(new Vector2(size.X, size.Y));
+            obj.Position = new Vector3(size.X * obj.Scale.X / 2f, TableHeight + 0.3f, 0.2f);
+            obj.LoadToBuffer();
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -342,18 +382,20 @@ namespace PokerParty.Client
             {
                 if (KeyboardState.IsKeyReleased(Keys.R))
                 {
-
-                    Debug.WriteLine("Your RAISED your bid.");
+                    NetClient.SendRaiseRequest(100);
+                    Debug.WriteLine("You RAISED your bid.");
                 }
 
                 if (KeyboardState.IsKeyReleased(Keys.F))
                 {
-                    Debug.WriteLine("Your FOLDED.");
+                    NetClient.SendFoldRequest();
+                    Debug.WriteLine("You FOLDED.");
                 }
 
                 if (KeyboardState.IsKeyReleased(Keys.C))
                 {
-                    Debug.WriteLine("Your CHECK.");
+                    NetClient.SendCheckRequest();
+                    Debug.WriteLine("You CHECK.");
                 }
             }
 
@@ -380,6 +422,11 @@ namespace PokerParty.Client
             buttonCollection.Draw();
 
             foreach (var obj in gameObjects)
+            {
+                obj.Draw();
+            }
+
+            foreach (var obj in seatLabels)
             {
                 obj.Draw();
             }

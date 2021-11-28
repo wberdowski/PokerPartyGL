@@ -8,7 +8,8 @@ namespace PokerParty.Client
     public class UIObject : GameObject
     {
         public UILayoutAnchor Anchor { get; set; }
-        public int Border { get; internal set; }
+        public int Border { get; set; }
+        public Vector2i Size { get; set; }
 
         public UIObject() : base()
         {
@@ -23,6 +24,10 @@ namespace PokerParty.Client
             {
                 offset = Vector3.Zero;
             }
+            else if (Anchor == UILayoutAnchor.TopCenter)
+            {
+                offset = new Vector3(Window.Camera.Bounds.Size.X / 2f - Size.X / 2f, 0, 0);
+            }
             else if (Anchor == UILayoutAnchor.TopRight)
             {
                 offset = new Vector3(Window.Camera.Bounds.Size.X, 0, 0);
@@ -30,6 +35,10 @@ namespace PokerParty.Client
             else if (Anchor == UILayoutAnchor.BottomLeft)
             {
                 offset = new Vector3(0, -Window.Camera.Bounds.Size.Y, 0);
+            }
+            else if (Anchor == UILayoutAnchor.BottomCenter)
+            {
+                offset = new Vector3(Window.Camera.Bounds.Size.X / 2f - Size.X / 2f, -Window.Camera.Bounds.Size.Y, 0);
             }
             else if (Anchor == UILayoutAnchor.BottomRight)
             {

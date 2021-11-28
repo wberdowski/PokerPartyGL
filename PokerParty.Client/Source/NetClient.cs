@@ -50,16 +50,11 @@ namespace PokerParty.Client
             {
                 Debug.WriteLine("Connected.");
                 SetMessageText("Connected.");
+
+                controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);
+
                 SendLoginRequest();
             }
-        }
-
-        private static async void SendLoginRequest()
-        {
-            var packet = new ControlPacket(OpCode.LoginRequest, Encoding.UTF8.GetBytes(Username));
-            await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
-
-            controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);
         }
 
         private static void OnControlReceive(IAsyncResult ar)
@@ -84,7 +79,7 @@ namespace PokerParty.Client
                 if (resPacket.Status == OpStatus.Success)
                 {
                     isAutorized = true;
-                    Debug.WriteLine($"Nickname \"{Username}\" registered.");
+                    Debug.WriteLine($"Nickname \"{Nickname}\" registered.");
                 }
                 else if (resPacket.Status == OpStatus.Failure)
                 {
@@ -97,9 +92,54 @@ namespace PokerParty.Client
                 gameState = BinarySerializer.Deserialize<GameState>(resPacket.Payload);
                 UpdateGameState();
             }
+            else if (resPacket.Code == OpCode.RaiseRequest)
+            {
+                if(resPacket.Status == OpStatus.Failure)
+                {
+                    SetMessageText("Cannot raise: " + resPacket.GetError());
+                }
+            }
+            else if (resPacket.Code == OpCode.FoldRequest)
+            {
+                if (resPacket.Status == OpStatus.Failure)
+                {
+                    SetMessageText("Cannot fold: " + resPacket.GetError());
+                }
+            }
+            else if (resPacket.Code == OpCode.CheckRequest)
+            {
+                if (resPacket.Status == OpStatus.Failure)
+                {
+                    SetMessageText("Cannot check: " + resPacket.GetError());
+                }
+            }
 
             controlSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, null);
         }
 
+        public static async void SendLoginRequest()
+        {
+            var packet = new ControlPacket(OpCode.LoginRequest, Encoding.UTF8.GetBytes(Nickname));
+            await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
+        }
+
+
+        public static async void SendRaiseRequest(int amount)
+        {
+            var packet = new ControlPacket(OpCode.RaiseRequest, BitConverter.GetBytes(amount));
+            await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
+        }
+
+        public static async void SendFoldRequest()
+        {
+            var packet = new ControlPacket(OpCode.FoldRequest);
+            await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
+        }
+
+        public static async void SendCheckRequest()
+        {
+            var packet = new ControlPacket(OpCode.CheckRequest);
+            await controlSocket.SendAsync(BinarySerializer.Serialize(packet), SocketFlags.None);
+        }
     }
 }

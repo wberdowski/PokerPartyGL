@@ -6,6 +6,13 @@
         public OpStatus Status { get; set; }
         public byte[] Payload { get; set; }
 
+        public ControlPacket(OpCode code)
+        {
+            Code = code;
+            Status = OpStatus.Unknown;
+            Payload = new byte[0];
+        }
+
         public ControlPacket(OpCode code, OpStatus status)
         {
             Code = code;
@@ -52,6 +59,9 @@
             LoginRequest,
             LoginResponse,
             GameStateUpdate,
+            RaiseRequest,
+            FoldRequest,
+            CheckRequest,
         }
 
         public enum OpStatus : byte
@@ -66,6 +76,9 @@
             Unknown,
             PlayerNicknameTaken,
             PlayerNicknameIsInvalid,
+            NotPlayersTurn,
+            PlayerAlreadyFolded,
+            GameNotStarted
         }
     }
 }

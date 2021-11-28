@@ -5,7 +5,7 @@ using System.Drawing.Text;
 
 namespace PokerParty.Client
 {
-    public class FontObject : UIObject
+    public class TextObject : UIObject
     {
         public string Text { get; private set; }
         public Vector2i Size { get; private set; }
@@ -13,7 +13,7 @@ namespace PokerParty.Client
         public Font Font { get; }
         public Brush Brush { get; }
 
-        public FontObject(string text, Font font, Brush brush) : base()
+        public TextObject(string text, Font font, Brush brush) : base()
         {
             Generate(text, font, brush);
             Font = font;
@@ -30,6 +30,10 @@ namespace PokerParty.Client
             {
                 offset = Vector3.Zero;
             }
+            else if (Anchor == UILayoutAnchor.TopCenter)
+            {
+                offset = new Vector3(Window.Camera.Bounds.Size.X / 2f - Size.X / 2f, 0, 0);
+            }
             else if (Anchor == UILayoutAnchor.TopRight)
             {
                 offset = new Vector3(Window.Camera.Bounds.Size.X, 0, 0);
@@ -37,6 +41,10 @@ namespace PokerParty.Client
             else if (Anchor == UILayoutAnchor.BottomLeft)
             {
                 offset = new Vector3(0, -Window.Camera.Bounds.Size.Y, 0);
+            }
+            else if (Anchor == UILayoutAnchor.BottomCenter)
+            {
+                offset = new Vector3(Window.Camera.Bounds.Size.X / 2f - Size.X / 2f, -Window.Camera.Bounds.Size.Y, 0);
             }
             else if (Anchor == UILayoutAnchor.BottomRight)
             {
@@ -67,7 +75,7 @@ namespace PokerParty.Client
 
             Mesh = new PanelMesh(Size);
 
-            Albedo = Texture.FromImage(Image);
+            Albedo = Texture.FromImage(Image, OpenTK.Graphics.OpenGL4.TextureMinFilter.Linear, OpenTK.Graphics.OpenGL4.TextureMagFilter.Linear, false);
         }
 
         public static Texture GenerateTexture(string text, Font font, Brush brush, out Vector2i size)
@@ -82,7 +90,7 @@ namespace PokerParty.Client
                 g.DrawString(text, font, brush, 0, 0);
             }
 
-            return Texture.FromImage(Image);
+            return Texture.FromImage(Image, OpenTK.Graphics.OpenGL4.TextureMinFilter.Linear, OpenTK.Graphics.OpenGL4.TextureMagFilter.Linear, false);
         }
     }
 }

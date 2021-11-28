@@ -53,17 +53,17 @@ namespace PokerParty.Client
 
             // TEXT
             {
-                var fontObj = new FontObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
+                var fontObj = new TextObject($"PokerParty v{Assembly.GetExecutingAssembly().GetName().Version}", new Font("Segoe UI", 12f), new SolidBrush(Color.FromArgb(100, Color.White)));
                 fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
-                fontObj.Anchor = UILayoutAnchor.BottomRight;
-                fontObj.Position = new Vector3(-(fontObj.Size.X + 10), fontObj.Size.Y + 10, 0);
+                fontObj.Anchor = UILayoutAnchor.TopRight;
+                fontObj.Position = new Vector3(-(fontObj.Size.X + 10), -10, 0);
                 fontObj.LoadToBuffer();
                 uiObjects.Add(fontObj);
             }
 
             {
-                var fontObj = new FontObject("Fold [F]\nRaise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
+                var fontObj = new TextObject("Fold [F]\nRaise [R]\nCheck [C]", new Font("Segoe UI", 14f, FontStyle.Bold), new SolidBrush(Color.White));
                 fontObj.Material = Materials["ui"];
                 fontObj.Layer = RenderLayer.UI;
                 fontObj.Anchor = UILayoutAnchor.BottomLeft;
@@ -73,7 +73,7 @@ namespace PokerParty.Client
             }
 
             {
-                playersListObj = new FontObject("Players (0):", new Font("Segoe UI", 12f, FontStyle.Bold), new SolidBrush(Color.White));
+                playersListObj = new TextObject("Players (0):", new Font("Segoe UI", 12f, FontStyle.Bold), new SolidBrush(Color.White));
                 playersListObj.Material = Materials["ui"];
                 playersListObj.Layer = RenderLayer.UI;
                 playersListObj.Anchor = UILayoutAnchor.TopLeft;
@@ -85,15 +85,15 @@ namespace PokerParty.Client
             // PLAYER NAMES
             foreach (var s in seats)
             {
-                var fontObj = new GameObject(new Vector3(0, TableHeight + 0.002f, -0.1f), Quaternion.FromEulerAngles(-(float)Math.PI / 2, 0, (float)Math.PI));
+                var fontObj = new GameObject(new Vector3(0, TableHeight + 0.3f, 0.2f), Quaternion.FromEulerAngles((float)Math.PI, 0, (float)Math.PI));
                 fontObj.InstanceMatrix = s;
-                fontObj.Scale = new Vector3(0.001f);
+                fontObj.Scale = new Vector3(0.0003f);
                 fontObj.Material = Materials["standard"];
-                fontObj.Albedo = FontObject.GenerateTexture("IceWallOwCome", new Font("Segoe UI", 18f, FontStyle.Bold), new SolidBrush(Color.White), out var size);
+                fontObj.Albedo = TextObject.GenerateTexture("N/A", new Font("Segoe UI", 100f, FontStyle.Bold), new SolidBrush(Color.Black), out var size);
                 fontObj.Mesh = new PanelMesh3D(new Vector2(size.X, size.Y));
                 fontObj.Position = new Vector3(fontObj.Position.X + size.X * fontObj.Scale.X / 2f, fontObj.Position.Y, fontObj.Position.Z);
                 fontObj.LoadToBuffer();
-                gameObjects.Add(fontObj);
+                seatLabels.Add(fontObj);
             }
 
             // PANEL
@@ -123,13 +123,38 @@ namespace PokerParty.Client
                 uiObjects.Add(panelObj);
             }
 
+            // Center panel
+            {
+                titleObj = new TextObject("Waiting for players", new Font("Segoe UI", 18f, FontStyle.Bold), new SolidBrush(Color.White));
+                titleObj.Material = Materials["ui"];
+                titleObj.Layer = RenderLayer.UI;
+                titleObj.Anchor = UILayoutAnchor.TopCenter;
+                titleObj.Position = new Vector3(0, -12, 0);
+                titleObj.LoadToBuffer();
+                uiObjects.Add(titleObj);
+            }
+
+            {
+                var panelObj = new UIObject();
+                panelObj.Mesh = new PanelMesh(new Vector2(400, 38));
+                panelObj.Size = new Vector2i(400, 48);
+                panelObj.Border = 6;
+                panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
+                panelObj.Material = Materials["ui"];
+                panelObj.Layer = RenderLayer.UI;
+                panelObj.Anchor = UILayoutAnchor.TopCenter;
+                panelObj.Position = new Vector3(0, -10, -1);
+                panelObj.LoadToBuffer();
+                uiObjects.Add(panelObj);
+            }
+
             // Message
             {
-                messageObj = new FontObject("Ready", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
+                messageObj = new TextObject("Ready", new Font("Segoe UI", 12f), new SolidBrush(Color.White));
                 messageObj.Material = Materials["ui"];
                 messageObj.Layer = RenderLayer.UI;
-                messageObj.Anchor = UILayoutAnchor.TopRight;
-                messageObj.Position = new Vector3(-406, -14, 0);
+                messageObj.Anchor = UILayoutAnchor.BottomRight;
+                messageObj.Position = new Vector3(-406, 38, 0);
                 messageObj.LoadToBuffer();
                 uiObjects.Add(messageObj);
             }
@@ -141,8 +166,8 @@ namespace PokerParty.Client
                 panelObj.Albedo = Texture.FromFile("models/panel/textures/panel.png", TextureMinFilter.Nearest);
                 panelObj.Material = Materials["ui"];
                 panelObj.Layer = RenderLayer.UI;
-                panelObj.Anchor = UILayoutAnchor.TopRight;
-                panelObj.Position = new Vector3(-410, -10, -1);
+                panelObj.Anchor = UILayoutAnchor.BottomRight;
+                panelObj.Position = new Vector3(-410, 42, -1);
                 panelObj.LoadToBuffer();
                 uiObjects.Add(panelObj);
             }
@@ -176,7 +201,7 @@ namespace PokerParty.Client
             chipTexture.GenerateMipmaps();
 
             {
-                chipCollection = new InstanceCollection(new Vector3(0, TableHeight + 0.002f, 0));
+                chipCollection = new InstanceCollection(new Vector3(0, TableHeight + 0.004f, 0));
                 chipCollection.Layer = RenderLayer.Instanced;
                 chipCollection.Material = Materials["card"];
                 chipCollection.Albedo3D = chipTexture;
