@@ -34,6 +34,7 @@ namespace PokerParty.Client
         public static List<GameObject> seatLabels = new List<GameObject>();
         public static InstanceCollection cardCollection;
         public static InstanceCollection buttonCollection;
+        public static InstanceCollection playerCardCollection;
 
         public static string Nickname { get; set; }
 
@@ -86,6 +87,7 @@ namespace PokerParty.Client
             CursorVisible = false;
             CursorGrabbed = true;
             VSync = VSyncMode.On;
+
 
             GL.ClearColor(skyColor.X, skyColor.Y, skyColor.Z, 1f);
             GL.Enable(EnableCap.DepthTest);
@@ -145,6 +147,7 @@ namespace PokerParty.Client
                 titleObj.Generate(text);
                 titleObj.DeleteBuffer();
                 titleObj.LoadToBuffer();
+                titleObj.UpdateModelMatrix();
             });
         }
 
@@ -175,9 +178,9 @@ namespace PokerParty.Client
                 // Update cards on the table
                 var cardInstances = new List<InstanceData>();
 
-                for (int i = 0; i < gameState.cardsOnTheTable.Length; i++)
+                for (int i = 0; i < gameState.shownTableCards.Length; i++)
                 {
-                    var card = gameState.cardsOnTheTable[i];
+                    var card = gameState.shownTableCards[i];
                     cardInstances.Add(new InstanceData(Matrix4.CreateTranslation(new Vector3(i * 0.1f - 0.2f, 0, 0)), card.index));
                 }
 
@@ -188,15 +191,32 @@ namespace PokerParty.Client
                 {
                     var player = gameState.players[p];
 
-                    if (p == gameState.turn)
+                    if (player.Nickname != Nickname)
                     {
-                        if (player.Nickname != Nickname)
+                        if (p == gameState.turn)
                         {
                             SetTitleText(player.Nickname + " turn");
-                        } else
+                        }
+                    }
+                    else
+                    {
+                        // THIS PLAYER
+                        if (p == gameState.turn)
                         {
                             SetTitleText("Your turn!");
                         }
+
+                        if (player.State == PlayerState.Playing)
+                        {
+                            playerCardCollection.Instances = new InstanceData[] {
+                                new InstanceData(Matrix4.CreateRotationX((float)Math.PI/2) * Matrix4.CreateTranslation(-0.035f,0,0), player.Cards[0].index),
+                                new InstanceData(Matrix4.CreateRotationX((float)Math.PI/2) * Matrix4.CreateTranslation(0.035f,0,0), player.Cards[1].index),
+                            };
+                        } else
+                        {
+                            playerCardCollection.Instances = new InstanceData[0];
+                        }
+                        playerCardCollection.UpdateInstanceDataBuffer();
                     }
 
                     // TODO: Dont update on every gamestate change
@@ -280,7 +300,7 @@ namespace PokerParty.Client
         {
             obj.Albedo.Dispose();
             obj.Dispose();
-            obj.Albedo = TextObject.GenerateTexture(text, new Font("Segoe UI", 100f, FontStyle.Bold), new SolidBrush(Color.Black), out var size);
+            obj.Albedo = TextObject.GenerateTexture(text, new Font("Segoe UI", 100f, FontStyle.Bold), new SolidBrush(Color.White), out var size);
             obj.Mesh = new PanelMesh3D(new Vector2(size.X, size.Y));
             obj.Position = new Vector3(size.X * obj.Scale.X / 2f, TableHeight + 0.3f, 0.2f);
             obj.LoadToBuffer();
@@ -413,6 +433,10 @@ namespace PokerParty.Client
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // CARDS
+            playerCardCollection.Material.Shader.SetInt("sticky", 1);
+            playerCardCollection.Draw();
+
+            cardCollection.Material.Shader.SetInt("sticky", 0);
             cardCollection.Draw();
 
             // CHIPS

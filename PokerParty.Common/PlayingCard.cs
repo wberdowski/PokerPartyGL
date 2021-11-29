@@ -59,5 +59,10 @@
             King,
             Ace
         }
+
+        public override string ToString()
+        {
+            return value + " of " + color;
+        }
     }
 }

@@ -105,21 +105,25 @@ namespace PokerParty.Client
 
         public void SetMatrix4(string attribName, Matrix4 matrix)
         {
+            Use();
             GL.UniformMatrix4(GetUniformLocation(attribName), false, ref matrix);
         }
 
         public void SetVec3(string attribName, Vector3 vector)
         {
+            Use();
             GL.Uniform3(GetUniformLocation(attribName), vector);
         }
 
         public void SetInt(string attribName, int value)
         {
+            Use();
             GL.Uniform1(GetUniformLocation(attribName), value);
         }
 
         public void SetFloat(string attribName, float value)
         {
+            Use();
             GL.Uniform1(GetUniformLocation(attribName), value);
         }
 

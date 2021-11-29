@@ -4,7 +4,8 @@
     {
         public bool active;
         public PlayerData[] players;
-        public PlayingCard[] cardsOnTheTable;
+        public PlayingCard[] shownTableCards;
+        public PlayingCard[] allTableCards;
         public int dealerButtonPos;
         public int turn;
         public int pot;

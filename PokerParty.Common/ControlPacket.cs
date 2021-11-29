@@ -75,6 +75,7 @@
         {
             Unknown,
             PlayerNicknameTaken,
+            SessionIsFull,
             PlayerNicknameIsInvalid,
             NotPlayersTurn,
             PlayerAlreadyFolded,

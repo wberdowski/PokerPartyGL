@@ -238,6 +238,18 @@ namespace PokerParty.Client
                 cardCollection.LoadToBuffer();
             }
 
+            // Player cards
+            {
+                playerCardCollection = new InstanceCollection(new Vector3(0,-0.009f,-Window.Camera.DepthNear - 0.0001f));
+                playerCardCollection.Scale = new Vector3(0.05f);
+                playerCardCollection.Layer = RenderLayer.Instanced;
+                playerCardCollection.Albedo3D = CardDeckLoader.Texture;
+                playerCardCollection.Material = Materials["card"];
+                playerCardCollection.Mesh = new Mesh();
+                playerCardCollection.Mesh.LoadFromObj("models/card/card.obj");
+                playerCardCollection.LoadToBuffer();
+            }
+
             Debug.WriteLine("Assets loaded");
         }
     }

@@ -121,9 +121,9 @@ namespace PokerParty.Server
                 var packet = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
                 Console.WriteLine(packet);
 
-                foreach(var cmd in Commands.Registered)
+                foreach (var cmd in Commands.Registered)
                 {
-                    if(cmd.Key == packet.Code)
+                    if (cmd.Key == packet.Code)
                     {
                         cmd.Value.Invoke(clientSocket, packet);
                     }
@@ -175,27 +175,36 @@ namespace PokerParty.Server
         [Obsolete()]
         internal static void GenGameState()
         {
+            CardDeck.ResetAndShuffle();
+
             gameState = new GameState();
             gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
-            gameState.cardsOnTheTable = new PlayingCard[0];
+            gameState.allTableCards = new PlayingCard[0];
+            gameState.shownTableCards = new PlayingCard[0];
 
+            foreach (var p in gameState.players)
+            {
+                p.Cards[0] = CardDeck.DrawOne();
+                p.Cards[1] = CardDeck.DrawOne();
+                p.State = PlayerState.Playing;
+            }
+
+            // Check if there are 2 or more players
             if (clients.Values.Where(x => x.Authorized).Count() >= 2)
             {
                 gameState.active = true;
                 gameState.dealerButtonPos = 0;
 
-                gameState.cardsOnTheTable = new PlayingCard[]
+                gameState.allTableCards = new PlayingCard[]
                 {
-                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                //PlayingCard.GetByIndex((byte)rand.Next(0, 51)),
-                PlayingCard.Back,
-                PlayingCard.Back,
-                PlayingCard.Back,
-                PlayingCard.Back,
-                PlayingCard.GetByIndex((byte)rand.Next(0, 51))
+                    CardDeck.DrawOne(),
+                    CardDeck.DrawOne(),
+                    CardDeck.DrawOne(),
+                    CardDeck.DrawOne(),
+                    CardDeck.DrawOne()
                 };
+
+                gameState.shownTableCards = gameState.allTableCards;
             }
         }
 

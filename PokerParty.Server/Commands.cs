@@ -38,6 +38,12 @@ namespace PokerParty.Server
                 var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameTaken);
                 NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
             }
+            else if (clients.Count > 2)
+            {
+                // Too much players
+                var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.SessionIsFull);
+                NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
+            }
             else
             {
                 if (!EnsureClientData(clientSocket, packet, out var data)) return;
@@ -47,10 +53,6 @@ namespace PokerParty.Server
                 data.PlayerData = new PlayerData(username);
                 data.PlayerData.Balance = 10000;
                 GenChips(data.PlayerData);
-
-                data.PlayerData.Cards[0] = new PlayingCard(PlayingCard.CardColor.Spades, PlayingCard.CardValue.Ace);
-                data.PlayerData.Cards[1] = new PlayingCard(PlayingCard.CardColor.Hearts, PlayingCard.CardValue.Queen);
-                data.PlayerData.State = PlayerState.Playing;
 
                 GenGameState();
 
