@@ -71,10 +71,16 @@ namespace PokerParty.Server
 
             int amount = BitConverter.ToInt32(packet.Payload);
             // TODO: Check if player has money
-            data.PlayerData.Bid += amount;
+            data.PlayerData.Bet += amount;
             data.PlayerData.Balance -= amount;
             gameState.pot += amount;
             GenChips(data.PlayerData);
+
+            if (data.PlayerData.Bet > gameState.bet)
+            {
+                gameState.bet = data.PlayerData.Bet;
+            }
+
             gameState.AdvanceTurn();
             BroadcastGameState();
         }

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PokerParty.Client": {
+      "commandName": "Project",
+      "commandLineArgs": "primary"
+    }
+  }
+}

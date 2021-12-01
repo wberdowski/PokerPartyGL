@@ -3,6 +3,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using PokerParty.Client.Dialogs;
 using PokerParty.Common;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using static PokerParty.Client.NetClient;
 using static PokerParty.Common.Chips;
 
@@ -37,6 +39,8 @@ namespace PokerParty.Client
         public static InstanceCollection playerCardCollection;
 
         public static string Nickname { get; set; }
+        public static bool IsTurn { get; private set; }
+        public static PlayerData Player { get; private set; }
 
         private bool wireframeEnabled;
         private float pitch = 0;
@@ -79,11 +83,11 @@ namespace PokerParty.Client
                 NumberOfSamples = 2
             })
         {
-            MonitorInfo info;
-            if (Monitors.TryGetMonitorInfo(CurrentMonitor, out info) || Monitors.TryGetMonitorInfo(0, out info))
-            {
-                Location = new Vector2i((int)(info.HorizontalResolution / 2f - Size.X / 2f), (int)(info.VerticalResolution / 2f - Size.Y / 2f));
-            }
+            //MonitorInfo info;
+            //if (Monitors.TryGetMonitorInfo(CurrentMonitor, out info) || Monitors.TryGetMonitorInfo(0, out info))
+            //{
+            //    Location = new Vector2i((int)(info.HorizontalResolution / 2f - Size.X / 2f), (int)(info.VerticalResolution / 2f - Size.Y / 2f));
+            //}
             CursorVisible = false;
             CursorGrabbed = true;
             VSync = VSyncMode.On;
@@ -126,6 +130,13 @@ namespace PokerParty.Client
 
             NetClient.Init();
             NetClient.Connect();
+
+#if DEBUG
+            if (Program.primary)
+            {
+                Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+            }
+#endif
 
             base.OnLoad();
         }
@@ -173,8 +184,6 @@ namespace PokerParty.Client
                 playersListObj.DeleteBuffer();
                 playersListObj.LoadToBuffer();
 
-                SetMessageText($"POT: {gameState.pot}");
-
                 // Update cards on the table
                 var cardInstances = new List<InstanceData>();
 
@@ -196,15 +205,21 @@ namespace PokerParty.Client
                         if (p == gameState.turn)
                         {
                             SetTitleText(player.Nickname + " turn");
+                            IsTurn = false;
                         }
                     }
                     else
                     {
+                        Player = player;
+
                         // THIS PLAYER
                         if (p == gameState.turn)
                         {
                             SetTitleText("Your turn!");
+                            IsTurn = true;
                         }
+
+                        SetMessageText($"YOUR BET: {player.Bet}, BET: {gameState.bet}, POT: {gameState.pot}");
 
                         if (player.State == PlayerState.Playing)
                         {
@@ -212,7 +227,8 @@ namespace PokerParty.Client
                                 new InstanceData(Matrix4.CreateRotationX((float)Math.PI/2) * Matrix4.CreateTranslation(-0.035f,0,0), player.Cards[0].index),
                                 new InstanceData(Matrix4.CreateRotationX((float)Math.PI/2) * Matrix4.CreateTranslation(0.035f,0,0), player.Cards[1].index),
                             };
-                        } else
+                        }
+                        else
                         {
                             playerCardCollection.Instances = new InstanceData[0];
                         }
@@ -400,22 +416,38 @@ namespace PokerParty.Client
 
             if (NetClient.IsConnected)
             {
-                if (KeyboardState.IsKeyReleased(Keys.R))
+                if (IsTurn)
                 {
-                    NetClient.SendRaiseRequest(100);
-                    Debug.WriteLine("You RAISED your bid.");
-                }
+                    if (KeyboardState.IsKeyReleased(Keys.R))
+                    {
+                        if (gameState != null && gameState.active)
+                        {
+                            var raiseDialog = new RaiseDialog();
+                            raiseDialog.CurrentTableBet = gameState.bet;
+                            raiseDialog.CurrentPlayerBet = Player.Bet;
+                            raiseDialog.MaxPlayerBet = gameState.players.Where(x => x.Nickname == Nickname).First().Balance;
 
-                if (KeyboardState.IsKeyReleased(Keys.F))
-                {
-                    NetClient.SendFoldRequest();
-                    Debug.WriteLine("You FOLDED.");
-                }
+                            var result = raiseDialog.ShowDialog();
 
-                if (KeyboardState.IsKeyReleased(Keys.C))
-                {
-                    NetClient.SendCheckRequest();
-                    Debug.WriteLine("You CHECK.");
+                            if (result == System.Windows.Forms.DialogResult.OK)
+                            {
+                                NetClient.SendRaiseRequest(raiseDialog.BetAmount);
+                                Debug.WriteLine($"You RAISED your bet by {raiseDialog.BetAmount}.");
+                            }
+                        }
+                    }
+
+                    if (KeyboardState.IsKeyReleased(Keys.F))
+                    {
+                        NetClient.SendFoldRequest();
+                        Debug.WriteLine("You FOLDED.");
+                    }
+
+                    if (KeyboardState.IsKeyReleased(Keys.C))
+                    {
+                        NetClient.SendCheckRequest();
+                        Debug.WriteLine("You CHECKED.");
+                    }
                 }
             }
 

@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "PokerParty.Server": {
+      "commandName": "Project"
+    }
+  }
+}

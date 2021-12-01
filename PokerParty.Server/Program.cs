@@ -1,5 +1,6 @@
 ﻿using BitSerializer;
 using PokerParty.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -18,6 +19,11 @@ namespace PokerParty.Server
         internal static Dictionary<Socket, ClientData> clients = new Dictionary<Socket, ClientData>();
         internal static Random rand = new Random();
         internal static GameState gameState;
+
+#if DEBUG
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowPos(int hWnd, int hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+#endif
 
         public static void Main(string[] args)
         {
@@ -49,6 +55,7 @@ namespace PokerParty.Server
 
                 if (cmdArgs.Length > 0)
                 {
+                    // TODO: Remove ""
                     if (cmdArgs[0] == "stop" || cmdArgs[0] == "")
                     {
                         return;
@@ -116,10 +123,7 @@ namespace PokerParty.Server
                     return;
                 }
 
-                Console.WriteLine($"Received {len} bytes from {(IPEndPoint)clientSocket.RemoteEndPoint}: {Encoding.UTF8.GetString(recvBuff, 0, len)}");
-
                 var packet = BinarySerializer.Deserialize<ControlPacket>(recvBuff);
-                Console.WriteLine(packet);
 
                 foreach (var cmd in Commands.Registered)
                 {
@@ -204,7 +208,16 @@ namespace PokerParty.Server
                     CardDeck.DrawOne()
                 };
 
-                gameState.shownTableCards = gameState.allTableCards;
+                gameState.shownTableCards = new PlayingCard[]
+                {
+                    PlayingCard.Back,
+                    PlayingCard.Back,
+                    PlayingCard.Back,
+                    PlayingCard.Back,
+                    PlayingCard.Back
+                };
+
+                Console.WriteLine("NEW GAME STARTED");
             }
         }
 
@@ -234,11 +247,13 @@ namespace PokerParty.Server
             clientSocket.Close();
             clientSocket.Dispose();
 
-            // TODO: REMOVE THIS
+            // TODO: Dont exit on 0 players
+#if DEBUG
             if (clients.Count() == 0)
             {
                 Environment.Exit(0);
             }
+#endif
         }
 
         internal static void BroadcastGameState()

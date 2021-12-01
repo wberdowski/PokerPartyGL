@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -9,10 +11,18 @@ namespace PokerParty.Client
 {
     public class Program
     {
+        internal static bool primary;
+
         public static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             Application.EnableVisualStyles();
+
+            if(args.Length > 0 && args[0] == "primary")
+            {
+                primary = true;
+            }
+
             new Window(1280, 720, "PokerParty");
         }
 
