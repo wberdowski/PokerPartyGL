@@ -137,45 +137,6 @@ namespace PokerParty.Server
             clientSocket.BeginReceive(recvBuff, 0, recvBuff.Length, SocketFlags.None, OnControlReceive, clientSocket);
         }
 
-        internal static void GenChips(PlayerData data)
-        {
-            data.Chips = new Chips();
-            int left = data.Balance;
-
-            while (left > 0)
-            {
-                if (left > 500)
-                {
-                    data.Chips[ChipColor.White]++;
-                    left -= 500;
-                }
-
-                if (left > 100)
-                {
-                    data.Chips[ChipColor.Blue]++;
-                    left -= 100;
-                }
-
-                if (left > 50)
-                {
-                    data.Chips[ChipColor.Green]++;
-                    left -= 50;
-                }
-
-                if (left > 20)
-                {
-                    data.Chips[ChipColor.Red]++;
-                    left -= 20;
-                }
-
-                if (left >= 10)
-                {
-                    data.Chips[ChipColor.Black]++;
-                    left -= 10;
-                }
-            }
-        }
-
         [Obsolete()]
         internal static void GenGameState()
         {

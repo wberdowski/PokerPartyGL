@@ -253,7 +253,7 @@ namespace PokerParty.Client
                     }
 
                     // Update player chips
-                    var chips = gameState.players[0].Chips;
+                    var chips = GenChips(player.Balance);
 
                     for (int j = 0; j < chips.Amounts.Length; j++)
                     {
@@ -269,6 +269,25 @@ namespace PokerParty.Client
                                 j
                             ));
                         }
+                    }
+                }
+
+                // Pot chips
+                var chips2 = GenChips(gameState.pot);
+
+                for (int j = 0; j < chips2.Amounts.Length; j++)
+                {
+                    for (int i = 0; i < chips2[(ChipColor)j]; i++)
+                    {
+                        chipInstances.Add(new InstanceData(
+                            Matrix4.CreateFromAxisAngle(new Vector3(0, 1, 0), rand.NextSingle() * 2 * (float)Math.PI) *
+                            Matrix4.CreateTranslation(
+                                (rand.NextSingle() - 0.5f) / 300f + (float)Math.Sin(j / 5f * Math.PI * 2) / 25f - 0.4f,
+                                (ChipHeight / 2f) + i * ChipHeight,
+                                (rand.NextSingle() - 0.5f) / 300f + (float)Math.Cos(j / 5f * Math.PI * 2) / 25f
+                            ),
+                            j
+                        ));
                     }
                 }
 
@@ -292,6 +311,47 @@ namespace PokerParty.Client
                 chipCollection.Instances = chipInstances.ToArray();
                 chipCollection.UpdateInstanceDataBuffer();
             });
+        }
+
+        internal static Chips GenChips(int amount)
+        {
+            var chips = new Chips();
+            int left = amount;
+
+            while (left > 0)
+            {
+                if (left > 500)
+                {
+                    chips[ChipColor.White]++;
+                    left -= 500;
+                }
+
+                if (left > 100)
+                {
+                    chips[ChipColor.Blue]++;
+                    left -= 100;
+                }
+
+                if (left > 50)
+                {
+                    chips[ChipColor.Green]++;
+                    left -= 50;
+                }
+
+                if (left > 20)
+                {
+                    chips[ChipColor.Red]++;
+                    left -= 20;
+                }
+
+                if (left >= 10)
+                {
+                    chips[ChipColor.Black]++;
+                    left -= 10;
+                }
+            }
+
+            return chips;
         }
 
         private static int mod(int x, int m)

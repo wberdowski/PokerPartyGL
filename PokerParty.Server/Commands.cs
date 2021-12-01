@@ -52,7 +52,6 @@ namespace PokerParty.Server
                 data.Authorized = true;
                 data.PlayerData = new PlayerData(username);
                 data.PlayerData.Balance = 10000;
-                GenChips(data.PlayerData);
 
                 GenGameState();
 
@@ -74,7 +73,6 @@ namespace PokerParty.Server
             data.PlayerData.Bet += amount;
             data.PlayerData.Balance -= amount;
             gameState.pot += amount;
-            GenChips(data.PlayerData);
 
             if (data.PlayerData.Bet > gameState.bet)
             {
@@ -103,6 +101,13 @@ namespace PokerParty.Server
             if (!EnsureClientData(clientSocket, packet, out var data)) return;
             if (!EnsurePlayerTurn(clientSocket, packet, data.PlayerData)) return;
             if (!EnsureNotFolded(clientSocket, packet, data.PlayerData)) return;
+
+            // TODO: Check balance!!!
+
+            int diff = gameState.bet - data.PlayerData.Bet;
+            data.PlayerData.Bet = gameState.bet;
+            data.PlayerData.Balance -= diff;
+            gameState.pot += diff;
 
             gameState.AdvanceTurn();
             BroadcastGameState();

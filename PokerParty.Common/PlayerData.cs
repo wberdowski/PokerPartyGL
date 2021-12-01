@@ -5,7 +5,6 @@
         public string Nickname;
         public bool Online;
         public PlayerState State;
-        public Chips Chips;
         // TODO: Dont broadcast others cards
         public PlayingCard[] Cards = new PlayingCard[2];
         public int Bet;
