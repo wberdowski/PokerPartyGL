@@ -38,7 +38,7 @@ namespace PokerParty.Server
                 var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.PlayerNicknameTaken);
                 NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));
             }
-            else if (clients.Count > 2)
+            else if (clients.Count > 10)
             {
                 // Too much players
                 var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Failure, ErrorCode.SessionIsFull);
@@ -53,7 +53,11 @@ namespace PokerParty.Server
                 data.PlayerData = new PlayerData(username);
                 data.PlayerData.Balance = 10000;
 
-                GenGameState();
+                // TODO: Dont start automatically
+                if (clients.Count >= 5)
+                {
+                    GenGameState();
+                }
 
                 var resPacket = new ControlPacket(OpCode.LoginResponse, OpStatus.Success);
                 NonBlockingSend(clientSocket, BinarySerializer.Serialize(resPacket));

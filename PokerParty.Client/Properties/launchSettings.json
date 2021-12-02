@@ -2,7 +2,7 @@
   "profiles": {
     "PokerParty.Client": {
       "commandName": "Project",
-      "commandLineArgs": "primary"
+      "commandLineArgs": "instances 5"
     }
   }
 }

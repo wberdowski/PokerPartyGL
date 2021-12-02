@@ -11,16 +11,16 @@ namespace PokerParty.Client
 {
     public class Program
     {
-        internal static bool primary;
+        internal static int instances;
 
         public static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             Application.EnableVisualStyles();
 
-            if(args.Length > 0 && args[0] == "primary")
+            if(args.Length > 1 && args[0] == "instances")
             {
-                primary = true;
+                instances = int.Parse(args[1]);
             }
 
             new Window(1280, 720, "PokerParty");

@@ -84,7 +84,7 @@ namespace PokerParty.Client
                 else if (resPacket.Status == OpStatus.Failure)
                 {
                     Debug.WriteLine($"Nickname register error: {resPacket.GetError()}.");
-                    SetMessageText("Can't register player nickname.");
+                    SetMessageText("Can't register player nickname: " + resPacket.GetError());
                 }
             }
             else if (resPacket.Code == OpCode.GameStateUpdate)

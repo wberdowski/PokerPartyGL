@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static PokerParty.Client.NetClient;
 using static PokerParty.Common.Chips;
@@ -132,9 +133,10 @@ namespace PokerParty.Client
             NetClient.Connect();
 
 #if DEBUG
-            if (Program.primary)
+            if (Program.instances > 1)
             {
-                Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+                Program.instances--;
+                Process.Start(Process.GetCurrentProcess().MainModule.FileName, "instances " + Program.instances);
             }
 #endif
 

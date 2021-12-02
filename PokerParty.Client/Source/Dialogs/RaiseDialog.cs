@@ -17,7 +17,7 @@ namespace PokerParty.Client.Dialogs
 
         protected override void OnShown(EventArgs e)
         {
-            amountValue.Minimum = Math.Max(0, CurrentTableBet - CurrentPlayerBet + 10);
+            amountValue.Minimum = Math.Max(0, CurrentTableBet - CurrentPlayerBet + 20);
             amountValue.Maximum = MaxPlayerBet;
 
             currentBetValue.Text = CurrentTableBet.ToString();

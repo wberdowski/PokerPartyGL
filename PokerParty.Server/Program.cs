@@ -140,46 +140,9 @@ namespace PokerParty.Server
         [Obsolete()]
         internal static void GenGameState()
         {
-            CardDeck.ResetAndShuffle();
-
-            gameState = new GameState();
-            gameState.players = clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray();
-            gameState.allTableCards = new PlayingCard[0];
-            gameState.shownTableCards = new PlayingCard[0];
-
-            foreach (var p in gameState.players)
-            {
-                p.Cards[0] = CardDeck.DrawOne();
-                p.Cards[1] = CardDeck.DrawOne();
-                p.State = PlayerState.Playing;
-            }
-
-            // Check if there are 2 or more players
-            if (clients.Values.Where(x => x.Authorized).Count() >= 2)
-            {
-                gameState.active = true;
-                gameState.dealerButtonPos = 0;
-
-                gameState.allTableCards = new PlayingCard[]
-                {
-                    CardDeck.DrawOne(),
-                    CardDeck.DrawOne(),
-                    CardDeck.DrawOne(),
-                    CardDeck.DrawOne(),
-                    CardDeck.DrawOne()
-                };
-
-                gameState.shownTableCards = new PlayingCard[]
-                {
-                    PlayingCard.Back,
-                    PlayingCard.Back,
-                    PlayingCard.Back,
-                    PlayingCard.Back,
-                    PlayingCard.Back
-                };
-
-                Console.WriteLine("NEW GAME STARTED");
-            }
+            gameState = GameState.StartNew(
+                clients.Values.Where(x => x.Authorized).Select(x => x.PlayerData).ToArray()
+                );
         }
 
         internal static void DisconnectClient(Socket clientSocket)
